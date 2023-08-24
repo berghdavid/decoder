@@ -14,7 +14,8 @@ struct Server {
 	int		work_s;	/* Number of workers			*/
 	int		port;	/* For example 5142			*/
 	int		pend;	/* Max number of pending connections	*/	
-	int		socket;	/* Socket connection			*/
+	int		socket;	/* Socket connection			*/	
+	int		buf_s;	/* Maximum buffer size (nbr of chars)	*/
 };
 
 /** Stores all necessary data for worker thread. */

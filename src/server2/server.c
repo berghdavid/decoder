@@ -7,18 +7,20 @@
 #include "queue.h"
 #include "server.h"
 
-/* TODO: Replace 2048 with an option */
+/* TODO: Fix socket lingering */
 
 Server* init_server(int argc, char* argv[])
 {
 	Server* 		server;
 	struct sockaddr_in	server_addr;
 
-	if (argc != 4) {
+	/* TODO: Replace with defaults and argument parsing */
+	if (argc != 5) {
 		fprintf(stderr, "Missing parameters:\n");
 		fprintf(stderr, "\tHost: For example 127.0.0.1\n");
 		fprintf(stderr, "\tPort: For example 5142\n");
 		fprintf(stderr, "\tPending connections: For example 100\n");
+		fprintf(stderr, "\tMax buf_size: For example 2048\n");
 		exit(0);
 	}
 
@@ -37,6 +39,10 @@ Server* init_server(int argc, char* argv[])
 	}
 	if (sscanf (argv[3], "%i", &server->pend) != 1) {
 		fprintf(stderr, "Error - pending argument not an integer.\n");
+		exit(0);
+	}
+	if (sscanf (argv[4], "%i", &server->buf_s) != 1) {
+		fprintf(stderr, "Error - buffer size argument not an integer.\n");
 		exit(0);
 	}
 
@@ -64,7 +70,7 @@ Worker* init_worker(int id, Server* server)
 	w->addr = NULL;
 	w->addr_s = 0;
 	w->socket = 0;
-	w->buf = calloc(2048, sizeof(char));
+	w->buf = calloc(server->buf_s, sizeof(char));
 	return w;
 }
 
@@ -86,12 +92,12 @@ void* work(void* arg)
 	printf("Listening for clients...\n");
 	while (1) {
 		w->socket = accept(w->server->socket, w->addr, &w->addr_s);
-		if (recv(w->socket, w->buf, 2048 * sizeof(char), 0) == -1) {
+		if (recv(w->socket, w->buf, w->server->buf_s * sizeof(char), 0) == -1) {
 			fprintf(stderr,	"Error when worker %d tried to receive.\n",
 				w->id);
 		}
 		printf("Received: %s\n", w->buf);
-		send(w->socket, w->buf, 2048 * sizeof(char), 0);
+		send(w->socket, w->buf, w->server->buf_s * sizeof(char), 0);
 		close(w->socket);
 		printf("Sent: %s\n", w->buf);
 		if (w->buf[0] == 'q') {
