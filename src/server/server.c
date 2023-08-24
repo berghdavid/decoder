@@ -74,17 +74,16 @@ int create_socket()
 
 void* wait_client(void* arg)
 {
-	struct sockaddr_in	client_addr;
-	socklen_t		addr_size;
-	info*			t_info;
-	int			client_socket;
-	int			i;
+	struct sockaddr	client_addr;
+	socklen_t	addr_size;
+	info*		t_info;
+	int		client_socket;
+	int		i;
 
 	t_info = (struct info*) arg;
 	
 	while(1) {
-		client_socket = accept(t_info->server_socket, 
-			(struct sockaddr*) &client_addr, &addr_size);
+		client_socket = accept(t_info->server_socket, &client_addr, &addr_size);
 		enq(t_info->q, t_info->id);
 		pthread_cond_signal(&cond_queue);
 
