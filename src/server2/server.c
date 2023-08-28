@@ -6,8 +6,25 @@
 
 #include "queue.h"
 #include "server.h"
+#include "parser.h"
 
 /* TODO: Fix socket lingering */
+
+void close_server(Server* server)
+{
+	int	i;
+
+	shutdown(server->socket, SHUT_RDWR);
+	for (i = 0; i < server->work_s; i++) {
+		free_data(server->worker[i]->data);
+		free(server->worker[i]->buf_rc);
+		free(server->worker[i]->buf_sd);
+		free(server->worker[i]);
+	}
+	free(server->worker);
+	free(server);
+	printf("Server closed gracefully\n");
+}
 
 Server* init_server(int argc, char* argv[])
 {
@@ -28,21 +45,24 @@ Server* init_server(int argc, char* argv[])
 	server->worker = NULL;
 	server->work_s = 0;
 	server->host = NULL;
-	server->port = 8080;
+	server->port = 5142;
 	server->pend = 1;
 	server->socket = socket(PF_INET, SOCK_STREAM, 0);
 
 	server->host = argv[1];
 	if (sscanf (argv[2], "%i", &server->port) != 1) {
 		fprintf(stderr, "Error - port argument not an integer.\n");
+		close_server(server);
 		exit(0);
 	}
 	if (sscanf (argv[3], "%i", &server->pend) != 1) {
 		fprintf(stderr, "Error - pending argument not an integer.\n");
+		close_server(server);
 		exit(0);
 	}
 	if (sscanf (argv[4], "%i", &server->buf_s) != 1) {
 		fprintf(stderr, "Error - buffer size argument not an integer.\n");
+		close_server(server);
 		exit(0);
 	}
 
@@ -54,6 +74,7 @@ Server* init_server(int argc, char* argv[])
 
 	if (bind(server->socket, (struct sockaddr*) &server_addr, sizeof(server_addr)) != 0) {
 		fprintf(stderr, "Error - Unsuccessfully bound to socket.\n");
+		close_server(server);
 		exit(0);
 	}
 	listen(server->socket, server->pend);
@@ -69,8 +90,10 @@ Worker* init_worker(int id, Server* server)
 	w->server = server;
 	w->addr = NULL;
 	w->addr_s = 0;
+	w->data = init_data();
 	w->socket = 0;
-	w->buf = calloc(server->buf_s, sizeof(char));
+	w->buf_rc = calloc(server->buf_s, sizeof(char));
+	w->buf_sd = calloc(server->buf_s, sizeof(char));
 	return w;
 }
 
@@ -87,20 +110,26 @@ void init_workers(Server* server, int workers)
 
 void* work(void* arg)
 {
-	Worker* w = (Worker*) arg;
-
-	printf("Listening for clients...\n");
+	Worker*	w;
+	
+	w = (Worker*) arg;
+	printf("Worker %d is accepting clients at %s:%d\n",
+		w->id, w->server->host, w->server->port);
 	while (1) {
 		w->socket = accept(w->server->socket, w->addr, &w->addr_s);
-		if (recv(w->socket, w->buf, w->server->buf_s * sizeof(char), 0) == -1) {
-			fprintf(stderr,	"Error when worker %d tried to receive.\n",
-				w->id);
+		if (recv(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0) == -1) {
+			fprintf(stderr,	"Error when worker %d tried to receive.\n", w->id);
 		}
-		printf("Received: %s\n", w->buf);
-		send(w->socket, w->buf, w->server->buf_s * sizeof(char), 0);
+		printf("Received: %s\n", w->buf_rc);
+		if (parse_package(w->data, w->buf_rc) != 0) {
+			printf("Error parsing package\n");
+		}
+		print_data(w->data);
+		send(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0);
 		close(w->socket);
-		printf("Sent: %s\n", w->buf);
-		if (w->buf[0] == 'q') {
+		printf("Sent: %s\n", w->buf_rc);
+		if (w->buf_rc[0] == 'q') {
+			/* TODO: Remove this quit condition */
 			break;
 		}
 	}
@@ -110,23 +139,11 @@ void* work(void* arg)
 void start_server(Server* server)
 {
 	/* TODO: Multithreading =) */
-
-	work(server->worker[0]);
-}
-
-void close_server(Server* server)
-{
 	int	i;
 
-	shutdown(server->socket, SHUT_RDWR);
-
 	for (i = 0; i < server->work_s; i++) {
-		free(server->worker[i]->buf);
-		free(server->worker[i]);
+		work(server->worker[i]);
 	}
-	free(server->worker);
-	free(server);
-	printf("Server closed gracefully\n");
 }
 
 int main(int argc, char* argv[])

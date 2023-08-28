@@ -3,9 +3,10 @@
 
 typedef struct Server Server;
 typedef struct Worker Worker;
-typedef struct sockaddr Sockaddr;
+typedef struct sockaddr Sockaddr; /* Built in from <netinet/in.h> */
 
 #include "queue.h"
+#include "parser.h"
 
 /** Contains relevant server information */
 struct Server {
@@ -23,24 +24,14 @@ struct Worker {
 	Server*		server;	/* Points to original server	*/
 	Sockaddr*	addr;	/* Open socket for sending data	*/
 	socklen_t	addr_s;	/* Length of peer address	*/
+	Data*		data;	/* Received package data	*/
 	int		socket;	/* Connected socket descriptor	*/
 	int		id;	/* Worker id			*/
-	char*		buf;	/* Buffer for receiving data	*/
+	char*		buf_rc;	/* Buffer for receiving data	*/
+	char*		buf_sd;	/* Buffer for sending data	*/
 };
 
-/**
- * Sorts and returns an array using insertion sort. 
- * Insertion sort is fast and easy for small arrays.
- */
-int* sort_array();
-
-/** Prints the received/sent array of ints.
- * 
- * @param s String which is either "received" or "sent".
- * @param thr_id Int ID of thread.
- * @param buf Array of ints to be printed.
-*/
-void print_buf(char s[], int thr_id, int buf[]);
+void close_server(Server* server);
 
 Server* init_server(int argc, char* argv[]);
 
@@ -50,12 +41,6 @@ Server* init_server(int argc, char* argv[]);
  */
 void* wait_client(void* arg);
 
-/**
- * Reads user input and toggles quit to true if 'exit' is entered.
- * This joins all the threads and shutdowns the server.
- */
-void* shutdown_server(void* arg);
-
-int main();
+int main(int argc, char* argv[]);
 
 #endif
