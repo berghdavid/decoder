@@ -24,7 +24,7 @@ clients: $(CLIENTS)
 	$(CC) -o clients $(CFLAGS) $(OPT_FLAGS) $(CLIENTS) $(LDFLAGS)
 
 run_server2: server2
-	./server2 127.0.0.1 5142 100 2048
+	./server2 127.0.0.1 5142 100 2048 1
 
 run_server: server
 	./server
@@ -48,7 +48,7 @@ debug_clients: $(CLIENTS)
 	$(CC) -o d_clients $(DEBUG_FLAGS) $(CFLAGS) $(CLIENTS) $(LDFLAGS)
 
 valgrind_server2: debug_server2
-	valgrind --leak-check=full --track-origins=yes ./d_server2 127.0.0.1 5142 100 2048
+	valgrind --leak-check=full --track-origins=yes ./d_server2 127.0.0.1 5142 100 2048 1
 
 debug_server2: $(SERVER2)
 	$(CC) -o d_server2 $(DEBUG_FLAGS) $(CFLAGS) $(SERVER2) $(LDFLAGS)

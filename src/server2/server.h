@@ -17,6 +17,7 @@ struct Server {
 	int		pend;	/* Max number of pending connections	*/	
 	int		socket;	/* Socket connection			*/	
 	int		buf_s;	/* Maximum buffer size (nbr of chars)	*/
+	int		reuse;	/* Reuse the same port			*/
 };
 
 /** Stores all necessary data for worker thread. */

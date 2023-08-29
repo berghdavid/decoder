@@ -8,8 +8,6 @@
 #include "server.h"
 #include "parser.h"
 
-/* TODO: Fix socket lingering */
-
 void close_server(Server* server)
 {
 	int	i;
@@ -32,12 +30,13 @@ Server* init_server(int argc, char* argv[])
 	struct sockaddr_in	server_addr;
 
 	/* TODO: Replace with defaults and argument parsing */
-	if (argc != 5) {
+	if (argc != 6) {
 		fprintf(stderr, "Missing parameters:\n");
 		fprintf(stderr, "\tHost: For example 127.0.0.1\n");
 		fprintf(stderr, "\tPort: For example 5142\n");
 		fprintf(stderr, "\tPending connections: For example 100\n");
 		fprintf(stderr, "\tMax buf_size: For example 2048\n");
+		fprintf(stderr, "\tReuse port: 0 or 1\n");
 		exit(0);
 	}
 
@@ -47,6 +46,7 @@ Server* init_server(int argc, char* argv[])
 	server->host = NULL;
 	server->port = 5142;
 	server->pend = 1;
+	server->reuse = 0;
 	server->socket = socket(PF_INET, SOCK_STREAM, 0);
 
 	server->host = argv[1];
@@ -65,6 +65,11 @@ Server* init_server(int argc, char* argv[])
 		close_server(server);
 		exit(0);
 	}
+	if (sscanf (argv[4], "%i", &server->reuse) != 1) {
+		fprintf(stderr, "Error - port reuse is not an.\n");
+		close_server(server);
+		exit(0);
+	}
 
 	memset(&server_addr, '\0', sizeof(server_addr));
 
@@ -72,7 +77,15 @@ Server* init_server(int argc, char* argv[])
 	server_addr.sin_port = htons(server->port);
 	server_addr.sin_addr.s_addr = inet_addr(server->host);
 
-	if (bind(server->socket, (struct sockaddr*) &server_addr, sizeof(server_addr)) != 0) {
+	if (setsockopt(server->socket, SOL_SOCKET, SO_REUSEADDR, &server->reuse,
+		sizeof(int)) < 0) {
+		fprintf(stderr, "Error - Unable to set SO_REUSEADDR option.\n");
+		close_server(server);
+		exit(0);
+	}
+
+	if (bind(server->socket, (struct sockaddr*) &server_addr,
+		sizeof(server_addr)) != 0) {
 		fprintf(stderr, "Error - Unsuccessfully bound to socket.\n");
 		close_server(server);
 		exit(0);
