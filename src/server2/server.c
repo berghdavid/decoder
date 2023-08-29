@@ -94,29 +94,46 @@ Server* init_server(int argc, char* argv[])
 	listen(server->socket, server->pend);
 	return server;
 }
+
 /**
- * @brief ##<pack-len>,<ID>,<work-no>,A03,<date-time>\r\n
- * 
- * @param w 
+ * ##<pack-len>,<ID>,<work-no>,A03,<date-time>\r\n
  */
 void build_response(Worker* w)
 {
 	char*		resp;
 	time_t		curr_t;
 	struct tm*	info_t;
-	char		t_str[14 + 1];
+	char		t_str[12 + 1];
+	int		pack_len;
+	int		i;
+	char		xor;
 
 	time(&curr_t);
 	info_t = localtime(&curr_t);
 	strftime(t_str, sizeof(t_str), "%y%m%d%H%M%S", info_t);
+	pack_len = 4 + strlen(w->data->id) + strlen(w->data->work_nb) +
+		strlen(w->data->cmd_code) + strlen(t_str);
 
 	resp = w->buf_sd;
 	resp[0] = '#';
 	resp[1] = '#';
+	snprintf(resp, 5, "##%d", pack_len);
+	strcat(resp, ",");
+	strcat(resp, w->data->id);
+	strcat(resp, ",");
+	strcat(resp, w->data->work_nb);
+	strcat(resp, ",");
+	strcat(resp, w->data->cmd_code);
+	strcat(resp, ",");
 	strcat(resp, t_str);
-	printf("resp: %s\n", resp);
-	printf("date: %s\n", t_str);
-	printf("strlen: %ld\n", strlen(t_str));
+
+	xor = 0;
+	for (i = 2; i < strlen(resp); i++) {
+		xor ^= resp[i];
+	}
+	strcat(resp, "*");
+        sprintf(resp + strlen(resp), "%02X", xor);
+	strcat(resp, "\r\n");
 }
 
 void reset_data(Worker* w)
