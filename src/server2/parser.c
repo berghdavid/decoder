@@ -40,11 +40,6 @@ void free_params(Data* data)
 	}	
 }
 
-void reset_data(Data* data)
-{
-	free_params(data);
-}
-
 void free_data(Data* data)
 {
 	free(data->id);
@@ -119,6 +114,7 @@ void parse_params(Data* data)
 	}
 	p->next = NULL;
 }
+
 int copy_str(char* dest, int dest_s, char* src)
 {
 	if (strlen(src) > dest_s) {

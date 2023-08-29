@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #include "queue.h"
 #include "server.h"
@@ -93,6 +94,37 @@ Server* init_server(int argc, char* argv[])
 	listen(server->socket, server->pend);
 	return server;
 }
+/**
+ * @brief ##<pack-len>,<ID>,<work-no>,A03,<date-time>\r\n
+ * 
+ * @param w 
+ */
+void build_response(Worker* w)
+{
+	char*		resp;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[14 + 1];
+
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%y%m%d%H%M%S", info_t);
+
+	resp = w->buf_sd;
+	resp[0] = '#';
+	resp[1] = '#';
+	strcat(resp, t_str);
+	printf("resp: %s\n", resp);
+	printf("date: %s\n", t_str);
+	printf("strlen: %ld\n", strlen(t_str));
+}
+
+void reset_data(Worker* w)
+{
+	/* TODO: Maybe skip string reset */
+	memset(w->buf_sd, 0, strlen(w->buf_sd));
+	free_params(w->data);
+}
 
 void print_received(Worker* w)
 {
@@ -147,11 +179,12 @@ void* work(void* arg)
 		}
 		print_received(w);
 		if (parse_package(w->data, w->buf_rc) == 0) {
+			build_response(w);
 			print_sent(w);
-			send(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0);
+			send(w->socket, w->buf_sd, w->server->buf_s * sizeof(char), 0);
 		}
 		close(w->socket);
-		reset_data(w->data);
+		reset_data(w);
 		if (w->buf_rc[0] == 'q') {
 			/* TODO: Remove this quit condition */
 			break;

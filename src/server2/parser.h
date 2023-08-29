@@ -26,8 +26,6 @@ struct Param {
 
 void free_params(Data* data);
 
-void reset_data(Data* data);
-
 Data* init_data();
 
 void free_data(Data* data);

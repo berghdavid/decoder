@@ -34,6 +34,8 @@ struct Worker {
 
 void close_server(Server* server);
 
+void reset_data(Worker* w);
+
 Server* init_server(int argc, char* argv[]);
 
 /** 
