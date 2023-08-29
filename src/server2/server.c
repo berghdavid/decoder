@@ -132,14 +132,14 @@ void* work(void* arg)
 		w->socket = accept(w->server->socket, w->addr, &w->addr_s);
 		if (recv(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0) == -1) {
 			fprintf(stderr,	"Error when worker %d tried to receive.\n", w->id);
+			continue;
 		}
-		printf("Received: %s\n", w->buf_rc);
-		if (parse_package(w->data, w->buf_rc) != 0) {
-			printf("Error parsing package\n");
+		if (parse_package(w->data, w->buf_rc) == 0) {
+			print_data(w->data);
 		}
-		print_data(w->data);
 		send(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0);
 		close(w->socket);
+		reset_data(w->data);
 		printf("Sent: %s\n", w->buf_rc);
 		if (w->buf_rc[0] == 'q') {
 			/* TODO: Remove this quit condition */
