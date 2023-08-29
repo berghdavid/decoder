@@ -94,6 +94,16 @@ Server* init_server(int argc, char* argv[])
 	return server;
 }
 
+void print_received(Worker* w)
+{
+	printf("[ Worker %d < fifo ]: %s\n", w->id, w->buf_rc);
+}
+
+void print_sent(Worker* w)
+{
+	printf("[ Worker %d > fifo ]: %s\n", w->id, w->buf_sd);
+}
+
 Worker* init_worker(int id, Server* server)
 {
 	Worker*	w;
@@ -128,19 +138,20 @@ void* work(void* arg)
 	w = (Worker*) arg;
 	printf("Worker %d is accepting clients at %s:%d\n",
 		w->id, w->server->host, w->server->port);
+
 	while (1) {
 		w->socket = accept(w->server->socket, w->addr, &w->addr_s);
 		if (recv(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0) == -1) {
 			fprintf(stderr,	"Error when worker %d tried to receive.\n", w->id);
 			continue;
 		}
+		print_received(w);
 		if (parse_package(w->data, w->buf_rc) == 0) {
-			print_data(w->data);
+			print_sent(w);
+			send(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0);
 		}
-		send(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0);
 		close(w->socket);
 		reset_data(w->data);
-		printf("Sent: %s\n", w->buf_rc);
 		if (w->buf_rc[0] == 'q') {
 			/* TODO: Remove this quit condition */
 			break;
