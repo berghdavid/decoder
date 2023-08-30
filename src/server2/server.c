@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 #include <time.h>
+#include <curl/curl.h>
+#include <arpa/inet.h>
 
 #include "queue.h"
 #include "server.h"
@@ -14,6 +15,9 @@ void close_server(Server* server)
 	int	i;
 
 	shutdown(server->socket, SHUT_RDWR);
+	curl_slist_free_all(server->slist);
+	curl_easy_cleanup(server->curl);
+	curl_global_cleanup();
 	for (i = 0; i < server->work_s; i++) {
 		free_data(server->worker[i]->data);
 		free(server->worker[i]->buf_rc);
@@ -23,6 +27,25 @@ void close_server(Server* server)
 	free(server->worker);
 	free(server);
 	printf("Server closed gracefully\n");
+}
+
+int init_curl(Server* server)
+{
+	CURL*		curl;
+	CurlSlist*	slist;
+	
+	curl = curl_easy_init();
+	slist = NULL;
+	if (!curl) {
+		return 1;
+	}
+	slist = curl_slist_append(slist, "Content-Type: application/json");
+	slist = curl_slist_append(slist, "Accept: application/json");
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	curl_easy_setopt(curl, CURLOPT_URL, "https://online.staging.traxmate.io:8000");
+	server->curl = curl;
+	server->slist = slist;
+	return 0;
 }
 
 Server* init_server(int argc, char* argv[])
@@ -70,6 +93,10 @@ Server* init_server(int argc, char* argv[])
 		fprintf(stderr, "Error - port reuse is not an.\n");
 		close_server(server);
 		exit(0);
+	}
+
+	if (init_curl(server) != 0) {
+		close_server(server);
 	}
 
 	memset(&server_addr, '\0', sizeof(server_addr));
@@ -134,6 +161,59 @@ void build_response(Worker* w)
 	strcat(resp, "*");
         sprintf(resp + strlen(resp), "%02X", xor);
 	strcat(resp, "\r\n");
+}
+
+/**
+   "original": {
+      "protocol": "Traccar",
+      "host": "onprem.staging.v3.traxmate.io",
+      "topic": "device/866344056940484",
+      "data": {
+        "event": {
+          "id": 36073,
+          "attributes": {},
+          "deviceId": 7,
+          "type": "deviceOffline",
+          "eventTime": "2023-07-17T11:08:27.320+00:00",
+          "positionId": 0,
+          "geofenceId": 0,
+          "maintenanceId": 0
+        },
+        "device": {
+          "id": 7,
+          "attributes": {},
+          "groupId": 0,
+          "name": "866344056940484",
+          "uniqueId": "866344056940484",
+          "status": "offline",
+          "lastUpdate": "2023-07-17T11:08:27.319+00:00",
+          "positionId": 2658,
+          "phone": null,
+          "model": null,
+          "contact": null,
+          "category": null,
+          "disabled": "false",
+          "expirationTime": null
+        }
+      }
+    },
+ * 
+ * @return int 
+ */
+int forward_data(Worker* w)
+{
+	const char*		json = "{\"name\": \"daniel\"}";
+	CURLcode		res;
+
+	/* TODO: Build JSON */
+	/* TODO: Make thread safe */
+
+	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, json);
+	res = curl_easy_perform(w->server->curl);
+	if(res != CURLE_OK) {
+		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+	}
+	return res == CURLE_OK;
 }
 
 void reset_data(Worker* w)
@@ -235,6 +315,7 @@ void* work(void* arg)
 			build_response(w);
 			print_sent(w);
 			send(w->socket, w->buf_sd, w->server->buf_s * sizeof(char), 0);
+			forward_data(w);
 		}
 		close(w->socket);
 		reset_data(w);

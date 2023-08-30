@@ -4,12 +4,16 @@
 typedef struct Server Server;
 typedef struct Worker Worker;
 typedef struct sockaddr Sockaddr; /* Built in from <netinet/in.h> */
+typedef struct curl_slist CurlSlist; /* Built from <curl/curl.h> */
 
+#include <curl/curl.h>
 #include "queue.h"
 #include "parser.h"
 
 /** Contains relevant server information */
 struct Server {
+	CURL*		curl;	/* Curl handle				*/
+	CurlSlist*	slist;	/* Slist headers for curl		*/
 	Worker**	worker;	/* Points to array of worker pointers	*/
 	char*		host;	/* For example '127.0.0.1'		*/
 	int		work_s;	/* Number of workers			*/

@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -pedantic-errors -pthread
-LDFLAGS=-lm -pthread
+LDFLAGS=-lm -pthread -lcurl
 OPT_FLAGS=-O3
 DEBUG_FLAGS=-ggdb3
 
@@ -48,7 +48,7 @@ debug_clients: $(CLIENTS)
 	$(CC) -o d_clients $(DEBUG_FLAGS) $(CFLAGS) $(CLIENTS) $(LDFLAGS)
 
 valgrind_server2: debug_server2
-	valgrind --leak-check=full --track-origins=yes ./d_server2 127.0.0.1 5142 100 2048 1
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server2 127.0.0.1 5142 100 2048 1
 
 debug_server2: $(SERVER2)
 	$(CC) -o d_server2 $(DEBUG_FLAGS) $(CFLAGS) $(SERVER2) $(LDFLAGS)
