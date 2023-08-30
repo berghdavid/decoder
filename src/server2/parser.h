@@ -17,6 +17,8 @@ struct Data {
 	int	para_str_s;	/* Command parameters size		*/
 	int	checksum_s;	/* Checksum size			*/
 	Param*	cmd_para;	/* Command parameters in linked list	*/
+	char*	json;		/* Built JSON to forward		*/
+	int	json_s;		/* JSON size in bytes			*/
 };
 
 struct Param {
@@ -26,7 +28,9 @@ struct Param {
 
 void free_params(Data* data);
 
-Data* init_data();
+Data* init_data(int max_buf);
+
+void build_forward_req(Data* data);
 
 void free_data(Data* data);
 

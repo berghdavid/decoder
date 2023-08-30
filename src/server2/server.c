@@ -42,7 +42,12 @@ int init_curl(Server* server)
 	slist = curl_slist_append(slist, "Content-Type: application/json");
 	slist = curl_slist_append(slist, "Accept: application/json");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_URL, "https://online.staging.traxmate.io:8000");
+	/* TODO: Pass connection timeout limits as parameters */
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 1L);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1L);
+	/* TODO: Pass URL as parameter */
+	//curl_easy_setopt(curl, CURLOPT_URL, "https://online.staging.traxmate.io:8000");
+	curl_easy_setopt(curl, CURLOPT_URL, "localhost:5111");
 	server->curl = curl;
 	server->slist = slist;
 	return 0;
@@ -202,16 +207,15 @@ void build_response(Worker* w)
  */
 int forward_data(Worker* w)
 {
-	const char*		json = "{\"name\": \"daniel\"}";
-	CURLcode		res;
+	CURLcode	res;
 
-	/* TODO: Build JSON */
-	/* TODO: Make thread safe */
+	/* TODO: Make thread-safe */
 
-	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, json);
+	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, w->data->json);
 	res = curl_easy_perform(w->server->curl);
-	if(res != CURLE_OK) {
-		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+	if (res != CURLE_OK) {
+		fprintf(stderr, "Error - curl_easy_perform() failed: %s\n",
+			curl_easy_strerror(res));
 	}
 	return res == CURLE_OK;
 }
@@ -240,10 +244,11 @@ void print_received(Worker* w)
 	len = strlen(str);
 	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
 		/* Print the string without the last two characters */
-		printf("%.*s\n", (int)(len - 2), str);
+		printf("%.*s", (int)(len - 2), str);
 	} else {
-		printf("%s\n", str);
+		printf("%s", str);
 	}
+	printf("\n\n");
 }
 
 void print_sent(Worker* w)
@@ -263,10 +268,11 @@ void print_sent(Worker* w)
 	len = strlen(str);
 	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
 		/* Print the string without the last two characters */
-		printf("%.*s\n", (int)(len - 2), str);
+		printf("%.*s", (int) (len - 2), str);
 	} else {
-		printf("%s\n", str);
+		printf("%s", str);
 	}
+	printf("\n\n");
 }
 
 Worker* init_worker(int id, Server* server)
@@ -278,7 +284,7 @@ Worker* init_worker(int id, Server* server)
 	w->server = server;
 	w->addr = NULL;
 	w->addr_s = 0;
-	w->data = init_data();
+	w->data = init_data(server->buf_s);
 	w->socket = 0;
 	w->buf_rc = calloc(server->buf_s, sizeof(char));
 	w->buf_sd = calloc(server->buf_s, sizeof(char));
@@ -307,17 +313,18 @@ void* work(void* arg)
 	while (1) {
 		w->socket = accept(w->server->socket, w->addr, &w->addr_s);
 		if (recv(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0) == -1) {
-			fprintf(stderr,	"Error when worker %d tried to receive.\n", w->id);
+			fprintf(stderr,	"Error - worker %d could not receive.\n", w->id);
 			continue;
 		}
 		print_received(w);
 		if (parse_package(w->data, w->buf_rc) == 0) {
 			build_response(w);
-			print_sent(w);
 			send(w->socket, w->buf_sd, w->server->buf_s * sizeof(char), 0);
-			forward_data(w);
+			print_sent(w);
 		}
 		close(w->socket);
+		build_forward_req(w->data);
+		forward_data(w);
 		reset_data(w);
 		if (w->buf_rc[0] == 'q') {
 			/* TODO: Remove this quit condition */
