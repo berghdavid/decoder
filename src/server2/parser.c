@@ -84,13 +84,14 @@ void parse_params(Data* data)
 
 	first = 1;
 	buf = data->para_str;
+	p = malloc(sizeof(Param));
+	p->str = NULL;
 	while (*buf == ',') {
 		if (!first) {
 			p->next = malloc(sizeof(Param));
 			p = p->next;
 		} else {
-			data->cmd_para = malloc(sizeof(Param));
-			p = data->cmd_para;
+			data->cmd_para = p;
 			first = 0;
 		}
 		p->next = NULL;
@@ -104,8 +105,7 @@ void parse_params(Data* data)
 			p->next = malloc(sizeof(Param));
 			p = p->next;
 		} else {
-			data->cmd_para = malloc(sizeof(Param));
-			p = data->cmd_para;
+			data->cmd_para = p;
 			first = 0;
 		}
 		p->str = calloc(128, sizeof(char));
