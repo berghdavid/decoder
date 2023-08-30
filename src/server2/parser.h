@@ -22,7 +22,8 @@ struct Data {
 };
 
 struct Param {
-	char*	str;
+	char*	key;
+	char*	val;
 	Param*	next;
 };
 
@@ -72,6 +73,8 @@ void build_forward_req(Data* data);
 void free_data(Data* data);
 
 void print_data(Data* data);
+
+void parse_cmd(Data* data);
 
 int copy_str(char* dest, int dest_s, char* src);
 

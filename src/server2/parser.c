@@ -3,6 +3,17 @@
 #include <string.h>
 #include "parser.h"
 
+char* PARAMS_A03[] = {
+	"alarm-param", "date-time", "mcc", "bat-v", "bat-level", "status",
+	"loc-type", "info"
+};
+char* PARAMS_A10[] = {
+	"status", "bat-ad"
+};
+char* PARAMS_GPS[] = {
+	"fix-flag", "speed", "salt-num", "lat", "lon"
+};
+
 Data* init_data(int max_buf)
 {
 	Data*	data;
@@ -65,7 +76,8 @@ void free_params(Data* data)
 	while (i != NULL) {
 		tmp = i;
 		i = i->next;
-		free(tmp->str);
+		free(tmp->key);
+		free(tmp->val);
 		free(tmp);
 	}	
 }
@@ -98,12 +110,88 @@ void print_data(Data* data)
 		if (p != data->cmd_para) {
 			printf(", ");
 		}
-		printf("%s", p->str);
+		printf("%s: %s", p->key, p->val);
 		p = p->next;
 	}
 	printf(" ]\n");
 	printf("Checksum:\t %s\n", data->checksum);
 	printf("\n");
+}
+/* TODO: Parsing */
+Param* parse_gps(Param* fix_flag)
+{
+	Param*	p;
+	int	i;
+	
+	p = fix_flag;
+	for (i = 0; i < 5; i++) {
+		if (p != NULL) {
+			strcpy(p->key, PARAMS_GPS[i]);
+		}
+	}
+	while (p != NULL && i < 5) {
+		i++;
+		p = p->next;
+	}
+	return p;
+}
+
+Param* parse_wifi(Param* p)
+{
+
+}
+
+void parse_cmd_A03(Data* data)
+{
+	Param*	p;
+	int	i;
+
+	p = data->cmd_para;
+	i = 0;
+	while (p != NULL) {
+		if (i < 6) {
+			strcpy(p->key, PARAMS_A03[i]);
+		} else if (i == 6) {
+			/* loc-type */
+			strcpy(p->key, PARAMS_A03[i]);
+			if (p->val == '0') {
+				p = parse_gps(p);
+			} else if (p->val == '1') {
+				p = parse_wifi(p);
+			} else {
+				/* TODO: Fix if this happens */
+			}
+			continue;
+		} else if (i == 7) {
+			strcpy(p->key, PARAMS_A03[i]);
+			break;
+		}
+		i++;
+		p = p->next;
+	}
+}
+
+void parse_cmd_A10(Data* data)
+{
+	Param*	p;
+	int	i;
+
+	p = data->cmd_para;
+	i = 0;
+	while (p != NULL && i < 2) {
+		strcpy(p->key, PARAMS_A10[i]);
+		i++;
+		p = p->next;
+	}
+}
+
+void parse_cmd(Data* data)
+{
+	if (strcmp(data->cmd_code, "A03") == 0) {
+		parse_cmd_A03(data);
+	} else if (strcmp(data->cmd_code, "A10") == 0) {
+		parse_cmd_A10(data);
+	}
 }
 
 void parse_params(Data* data)
@@ -116,7 +204,8 @@ void parse_params(Data* data)
 	first = 1;
 	buf = data->para_str;
 	p = malloc(sizeof(Param));
-	p->str = NULL;
+	p->key = NULL;
+	p->val = NULL;
 	while (*buf == ',') {
 		if (!first) {
 			p->next = malloc(sizeof(Param));
@@ -126,8 +215,10 @@ void parse_params(Data* data)
 			first = 0;
 		}
 		p->next = NULL;
-		p->str = calloc(128, sizeof(char));
-		strcpy(p->str, "\0");
+		p->key = calloc(128, sizeof(char));
+		p->val = calloc(128, sizeof(char));
+		strcpy(p->key, "\0");
+		strcpy(p->val, "\0");
 		buf++;
 	}
 	buf = strtok(buf, com_s);
@@ -139,8 +230,9 @@ void parse_params(Data* data)
 			data->cmd_para = p;
 			first = 0;
 		}
-		p->str = calloc(128, sizeof(char));
-		strcpy(p->str, buf);
+		p->key = calloc(128, sizeof(char));
+		p->val = calloc(128, sizeof(char));
+		strcpy(p->val, buf);
 		buf = strtok(NULL, com_s);
 	}
 	p->next = NULL;
@@ -241,5 +333,6 @@ int parse_package(Data* data, char* pack)
 		i++;
 	}
 	parse_params(data);
+	parse_cmd(data);
 	return 0;
 }
