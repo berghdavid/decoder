@@ -115,6 +115,17 @@ void parse_params(Data* data)
 	p->next = NULL;
 }
 
+void strip(char* str)
+{
+	char	c;
+
+	c = str[strlen(str) - 1];
+	while (c == '\n' || c == '\r') {
+		str[strlen(str) - 1] = '\0';
+		c = str[strlen(str) - 1];
+	}
+}
+
 int copy_str(char* dest, int dest_s, char* src)
 {
 	if (strlen(src) > dest_s) {
@@ -142,7 +153,7 @@ int parse_package(Data* data, char* pack)
 	while (buf != NULL) {
 		switch(i) {
 			case 0:
-				/* Remove $$ */
+				/* Skip $$ */
 				buf += 2;
 				if (sscanf (buf, "%i", &data->pack_len) != 1) {
 					fprintf(stderr, "Error - Packet length '%s' not an integer.\n", buf);
@@ -174,18 +185,18 @@ int parse_package(Data* data, char* pack)
 				}
 				break;
 			case 5:
+				/* Remove last 2 chars \r\n */
+				c = buf[strlen(buf) - 1];
+				if (c == '\n' || c == '\r') {
+					buf[strlen(buf) - 1] = '\0';
+				}
+				c = buf[strlen(buf) - 1];
+				if (c == '\n' || c == '\r') {
+					buf[strlen(buf) - 1] = '\0';
+				}
 				if (copy_str(data->checksum, data->checksum_s, buf)) {
 					fprintf(stderr, "Error - checksum string: '%s' is too large.\n", buf);
 					return 1;
-				}
-				/* Remove last 2 chars \r\n */
-				c = data->checksum[strlen(data->checksum) - 1];
-				if (c == '\n' || c == '\r') {
-					data->checksum[strlen(data->checksum) - 1] = '\0';
-				}
-				c = data->checksum[strlen(data->checksum) - 1];
-				if (c == '\n' || c == '\r') {
-					data->checksum[strlen(data->checksum) - 1] = '\0';
 				}
 				break;
 		}

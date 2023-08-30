@@ -145,12 +145,48 @@ void reset_data(Worker* w)
 
 void print_received(Worker* w)
 {
-	printf("[ Worker %d < fifo ]: %s\n", w->id, w->buf_rc);
+	char*		str;
+	size_t		len;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[32];
+
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
+	printf("%s [ Worker %d < fifo ]: ", t_str, w->id);
+	
+	str = w->buf_rc;
+	len = strlen(str);
+	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
+		/* Print the string without the last two characters */
+		printf("%.*s\n", (int)(len - 2), str);
+	} else {
+		printf("%s\n", str);
+	}
 }
 
 void print_sent(Worker* w)
 {
-	printf("[ Worker %d > fifo ]: %s\n", w->id, w->buf_sd);
+	char*		str;
+	size_t		len;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[32];
+
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
+	printf("%s [ Worker %d > fifo ]: ", t_str, w->id);
+	
+	str = w->buf_sd;
+	len = strlen(str);
+	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
+		/* Print the string without the last two characters */
+		printf("%.*s\n", (int)(len - 2), str);
+	} else {
+		printf("%s\n", str);
+	}
 }
 
 Worker* init_worker(int id, Server* server)
