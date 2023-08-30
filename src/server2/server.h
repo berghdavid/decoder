@@ -42,6 +42,11 @@ void reset_data(Worker* w);
 
 Server* init_server(int argc, char* argv[]);
 
+/**
+ * ##<pack-len>,<ID>,<work-no>,A03,<date-time>\r\n
+ */
+void build_response(Worker* w);
+
 /** 
  * Waits for a client to connect to, then communicates
  * with the connected client.

@@ -127,9 +127,6 @@ Server* init_server(int argc, char* argv[])
 	return server;
 }
 
-/**
- * ##<pack-len>,<ID>,<work-no>,A03,<date-time>\r\n
- */
 void build_response(Worker* w)
 {
 	char*		resp;
@@ -168,43 +165,6 @@ void build_response(Worker* w)
 	strcat(resp, "\r\n");
 }
 
-/**
-   "original": {
-      "protocol": "Traccar",
-      "host": "onprem.staging.v3.traxmate.io",
-      "topic": "device/866344056940484",
-      "data": {
-        "event": {
-          "id": 36073,
-          "attributes": {},
-          "deviceId": 7,
-          "type": "deviceOffline",
-          "eventTime": "2023-07-17T11:08:27.320+00:00",
-          "positionId": 0,
-          "geofenceId": 0,
-          "maintenanceId": 0
-        },
-        "device": {
-          "id": 7,
-          "attributes": {},
-          "groupId": 0,
-          "name": "866344056940484",
-          "uniqueId": "866344056940484",
-          "status": "offline",
-          "lastUpdate": "2023-07-17T11:08:27.319+00:00",
-          "positionId": 2658,
-          "phone": null,
-          "model": null,
-          "contact": null,
-          "category": null,
-          "disabled": "false",
-          "expirationTime": null
-        }
-      }
-    },
- * 
- * @return int 
- */
 int forward_data(Worker* w)
 {
 	CURLcode	res;
