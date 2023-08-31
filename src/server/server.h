@@ -4,6 +4,7 @@
 typedef struct Server Server;
 typedef struct Worker Worker;
 typedef struct sockaddr Sockaddr; /* Built in from <netinet/in.h> */
+typedef struct sockaddr_in Sokadin; /* Built in from <netinet/in.h> */
 typedef struct curl_slist CurlSlist; /* Built from <curl/curl.h> */
 
 #include <curl/curl.h>
@@ -15,6 +16,7 @@ struct Server {
 	CurlSlist*	slist;	/* Slist headers for curl		*/
 	Worker**	worker;	/* Points to array of worker pointers	*/
 	char*		host;	/* For example '127.0.0.1'		*/
+	char*		forwrd;	/* Curl forwarding address		*/
 	int		work_s;	/* Number of workers			*/
 	int		port;	/* For example 5124			*/
 	int		pend;	/* Max number of pending connections	*/

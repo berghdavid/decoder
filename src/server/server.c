@@ -69,7 +69,7 @@ int init_curl(Server* server)
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1L);
 	/* TODO: Pass URL as parameter */
 	//curl_easy_setopt(curl, CURLOPT_URL, "https://online.staging.traxmate.io:8000");
-	curl_easy_setopt(curl, CURLOPT_URL, "localhost:5111");
+	curl_easy_setopt(curl, CURLOPT_URL, server->forwrd);
 	server->curl = curl;
 	server->slist = slist;
 	return 0;
@@ -77,17 +77,18 @@ int init_curl(Server* server)
 
 Server* init_server(int argc, char* argv[])
 {
-	Server* 		server;
-	struct sockaddr_in	server_addr;
+	Server* server;
+	Sokadin	server_addr;
 
 	/* TODO: Replace with defaults and argument parsing */
-	if (argc != 6) {
+	if (argc != 7) {
 		fprintf(stderr, "Missing parameters:\n");
 		fprintf(stderr, "\tHost: For example 127.0.0.1\n");
 		fprintf(stderr, "\tPort: For example 5124\n");
 		fprintf(stderr, "\tPending connections: For example 100\n");
 		fprintf(stderr, "\tMax buf_size: For example 2048\n");
 		fprintf(stderr, "\tReuse port: 0 or 1\n");
+		fprintf(stderr, "\tForward url: For example localhost:80\n");
 		exit(0);
 	}
 
@@ -116,11 +117,12 @@ Server* init_server(int argc, char* argv[])
 		close_server(server);
 		exit(0);
 	}
-	if (sscanf (argv[4], "%i", &server->reuse) != 1) {
-		fprintf(stderr, "Error - port reuse is not an.\n");
+	if (sscanf (argv[5], "%i", &server->reuse) != 1) {
+		fprintf(stderr, "Error - port reuse is not an integer.\n");
 		close_server(server);
 		exit(0);
 	}
+	server->forwrd = argv[6];
 
 	if (init_curl(server) != 0) {
 		close_server(server);

@@ -27,13 +27,13 @@ debug_clients: $(CLIENTS) $(UTILS)
 # Server
 
 run_server: server
-	./server 127.0.0.1 5124 100 2048 1
+	./server 127.0.0.1 5124 100 2048 1 localhost:5111
 
 server: $(SERVER) $(UTILS)
 	$(CC) -o server $(CFLAGS) $(OPT_FLAGS) $(SERVER) $(UTILS) $(LDFLAGS)
 
 valgrind_server: debug_server
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server 127.0.0.1 5124 100 2048 1
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server 127.0.0.1 5124 100 2048 1 localhost:5111
 
 debug_server: $(SERVER) $(UTILS)
 	$(CC) -o d_server $(DEBUG_FLAGS) $(CFLAGS) $(SERVER) $(UTILS) $(LDFLAGS)
