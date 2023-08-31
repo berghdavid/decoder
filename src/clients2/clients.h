@@ -16,7 +16,6 @@ struct Client {
 	char*		host;	/* For example '127.0.0.1'		*/
 	int		work_s;	/* Number of workers			*/
 	int		port;	/* For example 5124			*/
-	int		socket;	/* Socket connection			*/
 	int		buf_s;	/* Maximum buffer size (nbr of chars)	*/
 };
 

@@ -72,17 +72,15 @@ void print_sent(Worker* w)
 	printf("\n\n");
 }
 
-void* send_data(void* arg)
+void* work(void* arg)
 {
 	Worker*	w;
 	
 	w = (Worker*) arg;
 
 	/* TODO: Thread unsafe */
-	w->socket = connect(w->client->socket, (Sockaddr*) &w->client->sockad, 
-		sizeof(w->client->sockad));
-
-	if (w->socket < 0) {
+	if (connect(w->socket, (Sockaddr*) &w->client->sockad, 
+		sizeof(w->client->sockad)) < 0) {
 		printf("Unsuccessful connection...\n");
 		return NULL;
 	}
@@ -99,7 +97,7 @@ void start_workers(Client* c)
 	int	i;
 
 	for (i = 0; i < c->work_s; i++) {
-		pthread_create(&c->thr[i], NULL, send_data, c->worker[i]);
+		pthread_create(&c->thr[i], NULL, work, c->worker[i]);
 	}
 
 	/* Wait for all threads, then join them when finished */
@@ -119,7 +117,7 @@ Worker* init_worker(Client* c, int id, char* data)
 	w->id = id;
 	w->addr = NULL;
 	w->addr_s = 0;
-	w->socket = 0;
+	w->socket = socket(PF_INET, SOCK_STREAM, 0);
 	w->buf_rc = calloc(2048, sizeof(char));
 	w->buf_sd = calloc(2048, sizeof(char));
 	strcpy(w->buf_sd, data);
@@ -151,7 +149,6 @@ Client* init_client(int workers)
 	c->buf_s = 2048;
 	c->host = "127.0.0.1";
 	c->port = 5124;
-	c->socket = socket(PF_INET, SOCK_STREAM, 0);
 	c->work_s = 0;
 	c->worker = NULL;
 	c->thr = NULL;
