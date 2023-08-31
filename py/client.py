@@ -5,7 +5,7 @@ import socket
 def client_program():
     """ Run client """
     host = socket.gethostname()
-    port = 5142  # socket server port number
+    port = 5124  # socket server port number
 
     client_socket = socket.socket()  # instantiate
     client_socket.connect((host, port))  # connect to the server

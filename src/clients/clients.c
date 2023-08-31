@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include "clients.h"
 
-#define PORT 5142	/* Use any available port			*/
+#define PORT 5124	/* Use any available port			*/
 #define BUF_SIZE 5	/* Size of buffer array				*/
 #define DATA_SIZE 10	/* Total size of client array			*/
 #define T_SIZE 3	/* Number of threads handling clients (N)	*/

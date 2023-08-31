@@ -8,7 +8,7 @@
 #include "queue.h"
 #include "server.h"
 
-#define PORT 5142       /* Port used				*/
+#define PORT 5124       /* Port used				*/
 #define BUF_SIZE 5      /* Size of buffer array			*/
 #define DATA_SIZE 10    /* Total size of client array		*/
 #define T_SIZE 3        /* Number of worker threads		*/

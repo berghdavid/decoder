@@ -62,7 +62,7 @@ Server* init_server(int argc, char* argv[])
 	if (argc != 6) {
 		fprintf(stderr, "Missing parameters:\n");
 		fprintf(stderr, "\tHost: For example 127.0.0.1\n");
-		fprintf(stderr, "\tPort: For example 5142\n");
+		fprintf(stderr, "\tPort: For example 5124\n");
 		fprintf(stderr, "\tPending connections: For example 100\n");
 		fprintf(stderr, "\tMax buf_size: For example 2048\n");
 		fprintf(stderr, "\tReuse port: 0 or 1\n");
@@ -73,7 +73,7 @@ Server* init_server(int argc, char* argv[])
 	server->worker = NULL;
 	server->work_s = 0;
 	server->host = NULL;
-	server->port = 5142;
+	server->port = 5124;
 	server->pend = 1;
 	server->reuse = 0;
 	server->socket = socket(PF_INET, SOCK_STREAM, 0);
@@ -127,7 +127,7 @@ Server* init_server(int argc, char* argv[])
 	return server;
 }
 
-void build_response(Worker* w)
+void response_A03(Worker* w)
 {
 	char*		resp;
 	time_t		curr_t;
@@ -163,6 +163,16 @@ void build_response(Worker* w)
 	strcat(resp, "*");
         sprintf(resp + strlen(resp), "%02X", xor);
 	strcat(resp, "\r\n");
+}
+
+void build_response(Worker* w)
+{
+	if (strcmp(w->data->cmd_code, "A03") == 0) {
+		response_A03(w);
+	} else if (strcmp(w->data->cmd_code, "A10") == 0) {
+		/* There is no response to A10 heartbeat */
+		return;
+	}
 }
 
 int forward_data(Worker* w)
@@ -204,7 +214,7 @@ void print_received(Worker* w)
 	len = strlen(str);
 	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
 		/* Print the string without the last two characters */
-		printf("%.*s", (int)(len - 2), str);
+		printf("%.*s", (int) (len - 2), str);
 	} else {
 		printf("%s", str);
 	}
@@ -233,33 +243,6 @@ void print_sent(Worker* w)
 		printf("%s", str);
 	}
 	printf("\n\n");
-}
-
-Worker* init_worker(int id, Server* server)
-{
-	Worker*	w;
-
-	w = malloc(sizeof(Worker));
-	w->id = id;
-	w->server = server;
-	w->addr = NULL;
-	w->addr_s = 0;
-	w->data = init_data(server->buf_s);
-	w->socket = 0;
-	w->buf_rc = calloc(server->buf_s, sizeof(char));
-	w->buf_sd = calloc(server->buf_s, sizeof(char));
-	return w;
-}
-
-void init_workers(Server* server, int workers)
-{
-	int	i;
-
-	server->work_s = workers;
-	server->worker = malloc(workers * sizeof(Worker*));
-	for (i = 0; i < workers; i++) {
-		server->worker[i] = init_worker(i, server);
-	}
 }
 
 void* work(void* arg)
@@ -292,6 +275,33 @@ void* work(void* arg)
 		}
 	}
 	return NULL;
+}
+
+Worker* init_worker(int id, Server* server)
+{
+	Worker*	w;
+
+	w = malloc(sizeof(Worker));
+	w->id = id;
+	w->server = server;
+	w->addr = NULL;
+	w->addr_s = 0;
+	w->data = init_data(server->buf_s);
+	w->socket = 0;
+	w->buf_rc = calloc(server->buf_s, sizeof(char));
+	w->buf_sd = calloc(server->buf_s, sizeof(char));
+	return w;
+}
+
+void init_workers(Server* server, int workers)
+{
+	int	i;
+
+	server->work_s = workers;
+	server->worker = malloc(workers * sizeof(Worker*));
+	for (i = 0; i < workers; i++) {
+		server->worker[i] = init_worker(i, server);
+	}
 }
 
 void start_server(Server* server)

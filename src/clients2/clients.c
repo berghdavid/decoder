@@ -1,100 +1,174 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "clients.h"
 
-#define PORT 5142	/* Use any available port			*/
-#define BUF_SIZE 2048	/* Size of buffer array				*/
-#define DATA_SIZE 10	/* Total size of client array			*/
-#define T_SIZE 3	/* Number of threads handling clients (N)	*/
-
-pthread_mutex_t print_l = PTHREAD_MUTEX_INITIALIZER;
-
-struct sockaddr_in get_server_addr()
+void free_client(Client* c)
 {
-	struct sockaddr_in server_addr;
-	memset(&server_addr, '\0', sizeof(server_addr));
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(PORT);
-	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	return server_addr;
+	Worker*	w;
+	int	i;
+
+	for (i = 0; i < c->work_s; i++) {
+		w = c->worker[i];
+		free(w->buf_rc);
+		free(w->buf_sd);
+		free(w);
+	}
+	free(c->worker);
+	free(c->thr);
+	free(c);
 }
 
-void print_buf(char s[], int id, int buf[])
+void print_received(Worker* w)
 {
-	int	i;
+	char*		str;
+	size_t		len;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[32];
+
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
+	printf("%s [ Worker %d < fifo ]: ", t_str, w->id);
 	
-	pthread_mutex_lock(&print_l);
-	printf("Thread %d %s: { ", id, s);
-	for (i = 0; i < BUF_SIZE; i++) {
-		printf("%d ", buf[i]);
+	str = w->buf_rc;
+	len = strlen(str);
+	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
+		/* Print the string without the last two characters */
+		printf("%.*s", (int) (len - 2), str);
+	} else {
+		printf("%s", str);
 	}
-	printf("}\n");
-	pthread_mutex_unlock(&print_l);
+	printf("\n\n");
 }
 
-int fill_buf(int* buf, int data[], int index)
+void print_sent(Worker* w)
 {
-	int	i;
+	char*		str;
+	size_t		len;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[32];
 
-	for (i = 0; i < BUF_SIZE; i++) {
-		*buf = data[index + i];
-		buf++;
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
+	printf("%s [ Worker %d > fifo ]: ", t_str, w->id);
+	
+	str = w->buf_sd;
+	len = strlen(str);
+	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
+		/* Print the string without the last two characters */
+		printf("%.*s", (int) (len - 2), str);
+	} else {
+		printf("%s", str);
 	}
-	return 0;
+	printf("\n\n");
 }
 
 void* send_data(void* arg)
 {
-	Client*	t_info;
+	Worker*	w;
 	int	i;
-	int	cl_socket;
 	
-	t_info = (Client*) arg;
-	cl_socket = socket(PF_INET, SOCK_STREAM, 0);
+	w = (Worker*) arg;
 
-	if (connect(cl_socket, (struct sockaddr*) &t_info->server_addr, 
-		sizeof(t_info->server_addr)) != 0) {
+	w->socket = connect(w->client->socket, (Sockaddr*) &w->client->sockad, 
+		sizeof(w->client->sockad));
+
+	if (w->socket < 0) {
 		printf("Unsuccessful connection...\n");
 		exit(0);
 	}
 
-	for (i = 0; i < DATA_SIZE; i += BUF_SIZE) {
-		send(cl_socket, t_info->data, sizeof(int) * BUF_SIZE, 0);
-		print_buf("sent: %s\n", t_info->id, t_info->data);
-		recv(cl_socket, t_info->data, sizeof(int) * BUF_SIZE, 0);
-		print_buf("received: %s\n", t_info->id, t_info->data);
-	}
+	send(w->socket, w->buf_sd, sizeof(char) * strlen(w->buf_sd), 0);
+	print_sent(w);
+	recv(w->socket, w->buf_rc, sizeof(char) * strlen(w->buf_rc), 0);
+	print_received(w);
 	return NULL;
+}
+
+void start_workers(Client* c)
+{
+	int	i;
+
+	for (i = 0; i < c->work_s; i++) {
+		pthread_create(c->thr[i], NULL, send_data, c->worker[i]);
+	}
+
+	/* Wait for all threads, then join them when finished */
+	for (i = 0; i < c->work_s; i++) {
+		if (pthread_join(c->thr[i], NULL) != 0) {
+			printf("Could not join with thread %d\n", i);
+		}
+	}
+}
+
+Worker* init_worker(Client* c, int id, char* data)
+{
+	Worker*	w;
+
+	w = malloc(sizeof(Worker));
+	w->id = id;
+	w->addr = NULL;
+	w->addr_s = 0;
+	w->socket = 0;
+	w->buf_rc = calloc(2048, sizeof(char));
+	w->buf_sd = calloc(2048, sizeof(char));
+	strcpy(w->buf_sd, data);
+}
+
+void init_workers(Client* c, int workers)
+{
+	int	i;
+	char*	data[3] = {
+		"fadf",
+		"fadf",
+		"fadf",
+	};
+
+	c->work_s = workers;
+	c->worker = malloc(workers * sizeof(Worker*));
+	c->thr = malloc(workers * sizeof(pthread_t));
+	for (i = 0; i < workers; i++) {
+		c->worker[i] = init_worker(c, i, data[i]);
+	}
+}
+
+Client* init_client(int workers)
+{
+	Client*	c;
+
+	c = malloc(sizeof(Client));
+	c->buf_s = 2048;
+	c->host = "127.0.0.1";
+	c->port = 5124;
+	c->socket = socket(PF_INET, SOCK_STREAM, 0);
+	c->work_s = 0;
+	c->worker = NULL;
+	c->thr = NULL;
+
+	memset(&c->sockad, '\0', sizeof(c->sockad));
+	c->sockad.sin_family = AF_INET;
+	c->sockad.sin_port = htons(c->port);
+	c->sockad.sin_addr.s_addr = inet_addr(c->host);
+
+	init_workers(c, 3);
+	return c;
 }
 
 int main()
 {
-	char data[] = "qHello world\n";
-	struct sockaddr_in	server_addr;
-	pthread_t		thr[T_SIZE];
-	Client*			client;
-	int			i;
+	Client*		c;
 
-	/* Start 'T_SIZE' different client threads */
-	server_addr = get_server_addr();
-	for (i = 0; i < T_SIZE; i++) {
-		client = malloc(sizeof(Client));
-		client->id = i;
-		client->data = data[i];
-		client->server_addr = server_addr;
-		pthread_create(&thr[i], NULL, send_data, client);
-	}
-
-	/* Wait for all threads, then join them when finished */
-	for (i = 0; i < T_SIZE; i++) {
-		if (pthread_join(thr[i], NULL) != 0) {
-			printf("Could not join with thread %d\n", i);
-		}
-	}
+	c = init_client(3);
+	start_workers(c);
+	free_client(c);
 	return 0;
 }

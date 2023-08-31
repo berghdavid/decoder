@@ -17,9 +17,9 @@ struct Server {
 	Worker**	worker;	/* Points to array of worker pointers	*/
 	char*		host;	/* For example '127.0.0.1'		*/
 	int		work_s;	/* Number of workers			*/
-	int		port;	/* For example 5142			*/
-	int		pend;	/* Max number of pending connections	*/	
-	int		socket;	/* Socket connection			*/	
+	int		port;	/* For example 5124			*/
+	int		pend;	/* Max number of pending connections	*/
+	int		socket;	/* Socket connection			*/
 	int		buf_s;	/* Maximum buffer size (nbr of chars)	*/
 	int		reuse;	/* Reuse the same port			*/
 };

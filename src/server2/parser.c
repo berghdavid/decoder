@@ -4,7 +4,7 @@
 #include "parser.h"
 
 char* PARAMS_A03[] = {
-	"alarm-param", "date-time", "mcc", "bat-v", "bat-level", "status",
+	"alarm-param", "date-time", "MCC|MNC|LAC|CI", "bat-v", "bat-level", "status",
 	"loc-type", "info"
 };
 char* PARAMS_A10[] = {
@@ -12,6 +12,9 @@ char* PARAMS_A10[] = {
 };
 char* PARAMS_GPS[] = {
 	"fix-flag", "speed", "salt-num", "lat", "lon"
+};
+char* PARAMS_WIFI[] = {
+	"wifi-ap"
 };
 
 Data* init_data(int max_buf)
@@ -117,28 +120,32 @@ void print_data(Data* data)
 	printf("Checksum:\t %s\n", data->checksum);
 	printf("\n");
 }
-/* TODO: Parsing */
+
 Param* parse_gps(Param* fix_flag)
 {
 	Param*	p;
 	int	i;
 	
-	p = fix_flag;
+	p = fix_flag->next;
 	for (i = 0; i < 5; i++) {
-		if (p != NULL) {
-			strcpy(p->key, PARAMS_GPS[i]);
+		if (p == NULL) {
+			break;
 		}
-	}
-	while (p != NULL && i < 5) {
-		i++;
+		strcpy(p->key, PARAMS_GPS[i]);
 		p = p->next;
 	}
 	return p;
 }
 
-Param* parse_wifi(Param* p)
+Param* parse_wifi(Param* fix_flag)
 {
+	Param*	p;
 
+	p = fix_flag->next;
+	if (p != NULL) {
+		strcpy(p->key, PARAMS_WIFI[0]);
+	}
+	return p->next;
 }
 
 void parse_cmd_A03(Data* data)
@@ -154,12 +161,10 @@ void parse_cmd_A03(Data* data)
 		} else if (i == 6) {
 			/* loc-type */
 			strcpy(p->key, PARAMS_A03[i]);
-			if (p->val == '0') {
+			if (*p->val == '0') {
 				p = parse_gps(p);
-			} else if (p->val == '1') {
+			} else if (*p->val == '1') {
 				p = parse_wifi(p);
-			} else {
-				/* TODO: Fix if this happens */
 			}
 			continue;
 		} else if (i == 7) {
@@ -177,10 +182,11 @@ void parse_cmd_A10(Data* data)
 	int	i;
 
 	p = data->cmd_para;
-	i = 0;
-	while (p != NULL && i < 2) {
+	for (i = 0; i < 2; i++) {
+		if (p == NULL) {
+			break;
+		}
 		strcpy(p->key, PARAMS_A10[i]);
-		i++;
 		p = p->next;
 	}
 }
