@@ -8,7 +8,7 @@
 #include "server.h"
 #include "../utils/parser.h"
 
-void print_received(Worker* w)
+void worker_log(Worker* w, char* other, char* log)
 {
 	char*		str;
 	size_t		len;
@@ -19,65 +19,16 @@ void print_received(Worker* w)
 	time(&curr_t);
 	info_t = localtime(&curr_t);
 	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d < fifo ]: ", t_str, w->id);
-	
-	str = w->buf_rc;
+	printf("%s [ Worker %d %s ]: ", t_str, w->id, other);
+
+	str = log;
 	len = strlen(str);
 	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
 		/* Print the string without the last two characters */
-		printf("%.*s", (int) (len - 2), str);
+		printf("%.*s\n", (int) (len - 2), str);
 	} else {
-		printf("%s", str);
+		printf("%s\n", str);
 	}
-	printf("\n\n");
-}
-
-void print_forwarded(Worker* w)
-{
-	char*		str;
-	size_t		len;
-	time_t		curr_t;
-	struct tm*	info_t;
-	char		t_str[32];
-
-	time(&curr_t);
-	info_t = localtime(&curr_t);
-	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d > forw ]: ", t_str, w->id);
-	
-	str = w->data->json;
-	len = strlen(str);
-	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
-		/* Print the string without the last two characters */
-		printf("%.*s", (int) (len - 2), str);
-	} else {
-		printf("%s", str);
-	}
-	printf("\n\n");
-}
-
-void print_sent(Worker* w)
-{
-	char*		str;
-	size_t		len;
-	time_t		curr_t;
-	struct tm*	info_t;
-	char		t_str[32];
-
-	time(&curr_t);
-	info_t = localtime(&curr_t);
-	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d > fifo ]: ", t_str, w->id);
-	
-	str = w->buf_sd;
-	len = strlen(str);
-	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
-		/* Print the string without the last two characters */
-		printf("%.*s", (int) (len - 2), str);
-	} else {
-		printf("%s", str);
-	}
-	printf("\n\n");
 }
 
 void close_server(Server* server)
@@ -255,7 +206,7 @@ int forward_data(Worker* w)
 	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, w->data->json);
 	res = curl_easy_perform(w->server->curl);
 	if (res == CURLE_OK) {
-		print_forwarded(w);
+		worker_log(w, "> forw", w->data->json);
 		return 0;
 	}
 	fprintf(stderr, "Error - curl forward failed: %s\n", curl_easy_strerror(res));
@@ -283,11 +234,11 @@ void* work(void* arg)
 			fprintf(stderr,	"Error - worker %d could not receive.\n", w->id);
 			continue;
 		}
-		print_received(w);
+		worker_log(w, "< fifo", w->buf_rc);
 		if (parse_package(w->data, w->buf_rc) == 0) {
 			build_response(w);
 			send(w->socket, w->buf_sd, w->server->buf_s * sizeof(char), 0);
-			print_sent(w);
+			worker_log(w, "> fifo", w->buf_sd);
 		}
 		close(w->socket);
 		build_forward_req(w->data);
