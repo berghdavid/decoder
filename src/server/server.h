@@ -1,46 +1,51 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "queue.h"
+typedef struct Server Server;
+typedef struct Worker Worker;
+typedef struct sockaddr Sockaddr; /* Built in from <netinet/in.h> */
+typedef struct curl_slist CurlSlist; /* Built from <curl/curl.h> */
 
-typedef struct info info;
+#include <curl/curl.h>
+#include "../utils/parser.h"
 
-/** Stores all necessary data for a pthread. */
-struct info
-{
-	int	id;
-	int	server_socket;
-	queue*	q;
+/** Contains relevant server information */
+struct Server {
+	CURL*		curl;	/* Curl handle				*/
+	CurlSlist*	slist;	/* Slist headers for curl		*/
+	Worker**	worker;	/* Points to array of worker pointers	*/
+	char*		host;	/* For example '127.0.0.1'		*/
+	int		work_s;	/* Number of workers			*/
+	int		port;	/* For example 5124			*/
+	int		pend;	/* Max number of pending connections	*/
+	int		socket;	/* Socket connection			*/
+	int		buf_s;	/* Maximum buffer size (nbr of chars)	*/
+	int		reuse;	/* Reuse the same port			*/
 };
 
-/**
- * Sorts and returns an array using insertion sort. 
- * Insertion sort is fast and easy for small arrays.
- */
-int* sort_array();
+/** Stores all necessary data for worker thread. */
+struct Worker {
+	Server*		server;	/* Points to original server	*/
+	Sockaddr*	addr;	/* Open socket for sending data	*/
+	socklen_t	addr_s;	/* Length of peer address	*/
+	Data*		data;	/* Received package data	*/
+	int		socket;	/* Connected socket descriptor	*/
+	int		id;	/* Worker id			*/
+	char*		buf_rc;	/* Buffer for receiving data	*/
+	char*		buf_sd;	/* Buffer for sending data	*/
+};
 
-/** Prints the received/sent array of ints.
- * 
- * @param s String which is either "received" or "sent".
- * @param thr_id Int ID of thread.
- * @param buf Array of ints to be printed.
-*/
-void print_buf(char s[], int thr_id, int buf[]);
+void close_server(Server* server);
 
-int create_socket();
+void reset_data(Worker* w);
 
-/** 
- * Waits for a client to connect to, then communicates
- * with the connected client.
- */
-void* wait_client(void* arg);
+Server* init_server(int argc, char* argv[]);
 
 /**
- * Reads user input and toggles quit to true if 'exit' is entered.
- * This joins all the threads and shutdowns the server.
+ * ##<pack-len>,<ID>,<work-no>,A03,<date-time>\r\n
  */
-void* shutdown_server(void* arg);
+void build_response(Worker* w);
 
-int main();
+int main(int argc, char* argv[]);
 
 #endif

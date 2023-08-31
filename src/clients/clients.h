@@ -3,17 +3,34 @@
 
 #include <netinet/in.h>
 
-typedef struct info info;
+typedef struct Client Client;
+typedef struct Worker Worker;
+typedef struct sockaddr_in SockaddrIn;
+typedef struct sockaddr Sockaddr;
 
-/* Used to store all necessary data with a pthread */
-struct info
-{
-	struct sockaddr_in	server_addr;
-	int*			data;
-	int			id;
+/** Contains relevant client information */
+struct Client {
+	Worker**	worker;	/* Points to array of worker pointers	*/
+	SockaddrIn	sockad;	/* Points to array of worker pointers	*/
+	pthread_t*	thr;	/* List of active threads		*/
+	char*		host;	/* For example '127.0.0.1'		*/
+	int		work_s;	/* Number of workers			*/
+	int		port;	/* For example 5124			*/
+	int		buf_s;	/* Maximum buffer size (nbr of chars)	*/
 };
 
-struct sockaddr_in get_server_addr();
+/** Stores all necessary data for worker thread. */
+struct Worker {
+	Client*		client;	/* Points to original client	*/
+	Sockaddr*	addr;	/* Open socket for sending data	*/
+	socklen_t	addr_s;	/* Length of peer address	*/
+	int		socket;	/* Connected socket descriptor	*/
+	int		id;	/* Worker id			*/
+	char*		buf_rc;	/* Buffer for receiving data	*/
+	char*		buf_sd;	/* Buffer for sending data	*/
+};
+
+SockaddrIn get_server_addr();
 
 /** Prints the received/sent array of ints.
  * 

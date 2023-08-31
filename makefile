@@ -5,59 +5,40 @@ OPT_FLAGS=-O3
 DEBUG_FLAGS=-ggdb3
 
 CLIENTS = $(wildcard src/clients/*.c)
-CLIENTS2 = $(wildcard src/clients2/*.c)
 SERVER = $(wildcard src/server/*.c)
-SERVER2 = $(wildcard src/server2/*.c)
+UTILS = $(wildcard src/utils/*.c)
 
 all: clients server debug_server debug_clients
 
-run_clients2: clients2
-	./clients2
+# Clients
 
 run_clients: clients
 	./clients
 
-clients2: $(CLIENTS2)
-	$(CC) -o clients2 $(CFLAGS) $(OPT_FLAGS) $(CLIENTS2) $(LDFLAGS)
-
-clients: $(CLIENTS)
-	$(CC) -o clients $(CFLAGS) $(OPT_FLAGS) $(CLIENTS) $(LDFLAGS)
-
-run_server2: server2
-	./server2 127.0.0.1 5124 100 2048 1
-
-run_server: server
-	./server
-
-server2: $(SERVER2)
-	$(CC) -o server2 $(CFLAGS) $(OPT_FLAGS) $(SERVER2) $(LDFLAGS)
-
-server: $(SERVER)
-	$(CC) -o server $(CFLAGS) $(OPT_FLAGS) $(SERVER) $(LDFLAGS)
-
-valgrind_clients2: debug_clients2
-	valgrind --leak-check=full --track-origins=yes ./d_clients2
-
-debug_clients2: $(CLIENTS2)
-	$(CC) -o d_clients2 $(DEBUG_FLAGS) $(CFLAGS) $(CLIENTS2) $(LDFLAGS)
+clients: $(CLIENTS) $(UTILS)
+	$(CC) -o clients $(CFLAGS) $(OPT_FLAGS) $(CLIENTS) $(UTILS) $(LDFLAGS)
 
 valgrind_clients: debug_clients
 	valgrind --leak-check=full --track-origins=yes ./d_clients
 
-debug_clients: $(CLIENTS)
-	$(CC) -o d_clients $(DEBUG_FLAGS) $(CFLAGS) $(CLIENTS) $(LDFLAGS)
+debug_clients: $(CLIENTS) $(UTILS)
+	$(CC) -o d_clients $(DEBUG_FLAGS) $(CFLAGS) $(CLIENTS) $(UTILS) $(LDFLAGS)
 
-valgrind_server2: debug_server2
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server2 127.0.0.1 5124 100 2048 1
+# Server
 
-debug_server2: $(SERVER2)
-	$(CC) -o d_server2 $(DEBUG_FLAGS) $(CFLAGS) $(SERVER2) $(LDFLAGS)
+run_server: server
+	./server 127.0.0.1 5124 100 2048 1
+
+server: $(SERVER) $(UTILS)
+	$(CC) -o server $(CFLAGS) $(OPT_FLAGS) $(SERVER) $(UTILS) $(LDFLAGS)
 
 valgrind_server: debug_server
-	valgrind --leak-check=full --track-origins=yes ./d_server
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server2 127.0.0.1 5124 100 2048 1
 
-debug_server: $(SERVER)
-	$(CC) -o d_server $(DEBUG_FLAGS) $(CFLAGS) $(SERVER) $(LDFLAGS)
+debug_server: $(SERVER) $(UTILS)
+	$(CC) -o d_server $(DEBUG_FLAGS) $(CFLAGS) $(SERVER) $(UTILS) $(LDFLAGS)
+
+# Cleanup
 
 clean: all
 	rm server
