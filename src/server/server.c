@@ -8,6 +8,78 @@
 #include "server.h"
 #include "../utils/parser.h"
 
+void print_received(Worker* w)
+{
+	char*		str;
+	size_t		len;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[32];
+
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
+	printf("%s [ Worker %d < fifo ]: ", t_str, w->id);
+	
+	str = w->buf_rc;
+	len = strlen(str);
+	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
+		/* Print the string without the last two characters */
+		printf("%.*s", (int) (len - 2), str);
+	} else {
+		printf("%s", str);
+	}
+	printf("\n\n");
+}
+
+void print_forwarded(Worker* w)
+{
+	char*		str;
+	size_t		len;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[32];
+
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
+	printf("%s [ Worker %d > forw ]: ", t_str, w->id);
+	
+	str = w->data->json;
+	len = strlen(str);
+	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
+		/* Print the string without the last two characters */
+		printf("%.*s", (int) (len - 2), str);
+	} else {
+		printf("%s", str);
+	}
+	printf("\n\n");
+}
+
+void print_sent(Worker* w)
+{
+	char*		str;
+	size_t		len;
+	time_t		curr_t;
+	struct tm*	info_t;
+	char		t_str[32];
+
+	time(&curr_t);
+	info_t = localtime(&curr_t);
+	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
+	printf("%s [ Worker %d > fifo ]: ", t_str, w->id);
+	
+	str = w->buf_sd;
+	len = strlen(str);
+	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
+		/* Print the string without the last two characters */
+		printf("%.*s", (int) (len - 2), str);
+	} else {
+		printf("%s", str);
+	}
+	printf("\n\n");
+}
+
 void close_server(Server* server)
 {
 	int	i;
@@ -182,10 +254,12 @@ int forward_data(Worker* w)
 
 	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, w->data->json);
 	res = curl_easy_perform(w->server->curl);
-	if (res != CURLE_OK) {
-		fprintf(stderr, "Error - %s\n", curl_easy_strerror(res));
+	if (res == CURLE_OK) {
+		print_forwarded(w);
+		return 0;
 	}
-	return res == CURLE_OK;
+	fprintf(stderr, "Error - %s\n", curl_easy_strerror(res));
+	return 1;
 }
 
 void reset_data(Worker* w)
@@ -193,54 +267,6 @@ void reset_data(Worker* w)
 	/* TODO: Maybe skip string reset */
 	memset(w->buf_sd, 0, strlen(w->buf_sd));
 	free_params(w->data);
-}
-
-void print_received(Worker* w)
-{
-	char*		str;
-	size_t		len;
-	time_t		curr_t;
-	struct tm*	info_t;
-	char		t_str[32];
-
-	time(&curr_t);
-	info_t = localtime(&curr_t);
-	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d < fifo ]: ", t_str, w->id);
-	
-	str = w->buf_rc;
-	len = strlen(str);
-	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
-		/* Print the string without the last two characters */
-		printf("%.*s", (int) (len - 2), str);
-	} else {
-		printf("%s", str);
-	}
-	printf("\n\n");
-}
-
-void print_sent(Worker* w)
-{
-	char*		str;
-	size_t		len;
-	time_t		curr_t;
-	struct tm*	info_t;
-	char		t_str[32];
-
-	time(&curr_t);
-	info_t = localtime(&curr_t);
-	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d > fifo ]: ", t_str, w->id);
-	
-	str = w->buf_sd;
-	len = strlen(str);
-	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
-		/* Print the string without the last two characters */
-		printf("%.*s", (int) (len - 2), str);
-	} else {
-		printf("%s", str);
-	}
-	printf("\n\n");
 }
 
 void* work(void* arg)
