@@ -221,8 +221,8 @@ void parse_params(Data* data)
 			first = 0;
 		}
 		p->next = NULL;
-		p->key = calloc(128, sizeof(char));
-		p->val = calloc(128, sizeof(char));
+		p->key = calloc(512, sizeof(char));
+		p->val = calloc(512, sizeof(char));
 		strcpy(p->key, "\0");
 		strcpy(p->val, "\0");
 		buf++;
@@ -236,9 +236,11 @@ void parse_params(Data* data)
 			data->cmd_para = p;
 			first = 0;
 		}
-		p->key = calloc(128, sizeof(char));
-		p->val = calloc(128, sizeof(char));
-		strcpy(p->val, buf);
+		p->key = calloc(512, sizeof(char));
+		p->val = calloc(512, sizeof(char));
+		if (copy_str(p->val, 512, buf)) {
+			fprintf(stderr, "Error - parameter: '%s' is larger than 512 bytes.\n", buf);
+		}
 		buf = strtok(NULL, com_s);
 	}
 	p->next = NULL;

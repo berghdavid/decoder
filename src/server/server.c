@@ -258,7 +258,7 @@ int forward_data(Worker* w)
 		print_forwarded(w);
 		return 0;
 	}
-	fprintf(stderr, "Error - %s\n", curl_easy_strerror(res));
+	fprintf(stderr, "Error - curl forward failed: %s\n", curl_easy_strerror(res));
 	return 1;
 }
 

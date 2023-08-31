@@ -1,82 +1,62 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <pthread.h>
-
+#include <string.h>
 #include "queue.h"
 
-queue* queue_create(void)
+Queue* queue_create(int str_s)
 {
-	struct queue *q;
+	Queue*	q;
 
-	q = (struct queue *) malloc(sizeof(struct queue));
+	q = malloc(sizeof(Queue));
 	q->head = q->tail = NULL;
-
-	if(pthread_mutex_init(&q->lock, NULL) != 0) {
-		printf("Error initializing queue lock.");
-	}
-
+	q->str_s = str_s;
+	q->size = 0;
 	return q;
 }
 
-void enq(queue* q, int value)
+void enq(Queue* q, char* value)
 {
-	node*	e;
+	Node*	e;
 
-	e = malloc(sizeof(node));
-	e->value = value;
+	e = malloc(sizeof(Node));
+	e->value = calloc(q->str_s, sizeof(char));
+	strcpy(e->value, value);
 	e->next = NULL;
 
-	pthread_mutex_lock(&q->lock);
 	if (q->head == NULL) {
 		q->head = e;
 	} else {
 		q->tail->next = e;
 	}
 	q->tail = e;
-	pthread_mutex_unlock(&q->lock);
+	q->size++;
 }
 
-int queue_empty(const queue* q)
+int queue_empty(const Queue* q)
 {
 	return q->head == NULL;
 }
 
-int deq(queue *q)
+char* deq(Queue *q)
 {
-	int	ret;
-	node*	e;
+	char*	ret;
+	Node*	e;
 
-	pthread_mutex_lock(&q->lock);
-	ret = q->head->value;
-
+	if (q->head != NULL) {
+		ret = q->head->value;
+	} else {
+		return NULL;
+	}
 	e = q->head;
 	q->head = e->next;
 	free(e);
-	pthread_mutex_unlock(&q->lock);
+	q->size--;
 	return ret;
 }
 
-void queue_print(queue* q)
+void queue_destroy(Queue *q)
 {
-	node*	e;
-
-	pthread_mutex_lock(&q->lock);
-	e = q->head;
-	while (e != NULL) {
-		printf("%d ", e->value);
-		e = e->next;
-	}
-	printf("\n");
-	pthread_mutex_unlock(&q->lock);
-}
-
-void queue_destroy(queue *q)
-{
-	pthread_mutex_lock(&q->lock);
 	while (!queue_empty(q)) {
-		deq(q);
+		free(deq(q));
 	}
 	free(q);
-	pthread_mutex_unlock(&q->lock);
 }

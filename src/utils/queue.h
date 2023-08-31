@@ -1,41 +1,39 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-typedef struct node node;
-typedef struct queue queue;
+typedef struct Node Node;
+typedef struct Queue Queue;
 
 /**
  * @brief Fifo list element
  */
-struct node {
-	node*	next;
-	int	value;
+struct Node {
+	Node*	next;
+	char*	value;
 };
 
 /**
  * @brief Fifo queue
  */
-struct queue {
-	pthread_mutex_t	lock;	/* Mutex for multithreaded queue access	*/
-	node*		head;	/* Dequeue this next			*/
-	node*		tail;	/* Enqueue after this			*/
+struct Queue {
+	Node*	head;	/* Dequeue this next	*/
+	Node*	tail;	/* Enqueue after this	*/
+	int	str_s;	/* Size of strings	*/
+	int	size;	/* Total queue size	*/
 };
 
 /* Create a new empty queue */
-queue* queue_create(void);
+Queue* queue_create(int str_s);
 
 /* Add a new value to back of queue */
-void enq(queue* q, int value);
+void enq(Queue* q, char* value);
 
-int queue_empty(const queue* q);
+int queue_empty(const Queue* q);
 
 /* Remove and return value from front of queue */
-int deq(queue* q);
-
-/* Print contents of queue on a single line, head first */
-void queue_print(queue* q);
+char* deq(Queue* q);
 
 /* Free a queue and all of its elements */
-void queue_destroy(queue* q);
+void queue_destroy(Queue* q);
 
 #endif
