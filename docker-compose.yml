@@ -1,0 +1,12 @@
+version: "3.3"
+name: "fifo"
+services:
+  fifo:
+    build: .
+    restart: unless-stopped
+    container_name: fifo-c
+    image: fifo-i
+    ports:
+      - 5124:5124
+    environment:
+      - ENV=dev
