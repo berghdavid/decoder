@@ -9,4 +9,9 @@ services:
     ports:
       - 5124:5124
     environment:
-      - ENV=dev
+      - HOST=127.0.0.1
+      - PORT=5124
+      - PENDING=512
+      - MAX_BUF=2048
+      - REUSE=1
+      - FORWARD=localhost:5111

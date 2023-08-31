@@ -9,4 +9,4 @@ FROM alpine
 RUN apk --no-cache add curl-dev
 COPY --from=build-env /app/server /app/server
 WORKDIR /app
-CMD ["/app/server"]
+CMD ["/app/server $HOST $PORT $PENDING $MAX_BUF $REUSE $FORWARD"]
