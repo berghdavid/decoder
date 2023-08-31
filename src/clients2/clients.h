@@ -12,7 +12,7 @@ typedef struct sockaddr Sockaddr;
 struct Client {
 	Worker**	worker;	/* Points to array of worker pointers	*/
 	SockaddrIn	sockad;	/* Points to array of worker pointers	*/
-	pthread_t**	thr;	/* List of active threads		*/
+	pthread_t*	thr;	/* List of active threads		*/
 	char*		host;	/* For example '127.0.0.1'		*/
 	int		work_s;	/* Number of workers			*/
 	int		port;	/* For example 5124			*/

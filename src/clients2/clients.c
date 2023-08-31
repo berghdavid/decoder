@@ -35,7 +35,7 @@ void print_received(Worker* w)
 	time(&curr_t);
 	info_t = localtime(&curr_t);
 	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d < fifo ]: ", t_str, w->id);
+	printf("%s [ Client %d < Server ]: ", t_str, w->id);
 	
 	str = w->buf_rc;
 	len = strlen(str);
@@ -59,7 +59,7 @@ void print_sent(Worker* w)
 	time(&curr_t);
 	info_t = localtime(&curr_t);
 	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d > fifo ]: ", t_str, w->id);
+	printf("%s [ Client %d > server ]: ", t_str, w->id);
 	
 	str = w->buf_sd;
 	len = strlen(str);
@@ -75,16 +75,16 @@ void print_sent(Worker* w)
 void* send_data(void* arg)
 {
 	Worker*	w;
-	int	i;
 	
 	w = (Worker*) arg;
 
+	/* TODO: Thread unsafe */
 	w->socket = connect(w->client->socket, (Sockaddr*) &w->client->sockad, 
 		sizeof(w->client->sockad));
 
 	if (w->socket < 0) {
 		printf("Unsuccessful connection...\n");
-		exit(0);
+		return NULL;
 	}
 
 	send(w->socket, w->buf_sd, sizeof(char) * strlen(w->buf_sd), 0);
@@ -99,7 +99,7 @@ void start_workers(Client* c)
 	int	i;
 
 	for (i = 0; i < c->work_s; i++) {
-		pthread_create(c->thr[i], NULL, send_data, c->worker[i]);
+		pthread_create(&c->thr[i], NULL, send_data, c->worker[i]);
 	}
 
 	/* Wait for all threads, then join them when finished */
@@ -115,6 +115,7 @@ Worker* init_worker(Client* c, int id, char* data)
 	Worker*	w;
 
 	w = malloc(sizeof(Worker));
+	w->client = c;
 	w->id = id;
 	w->addr = NULL;
 	w->addr_s = 0;
@@ -122,6 +123,7 @@ Worker* init_worker(Client* c, int id, char* data)
 	w->buf_rc = calloc(2048, sizeof(char));
 	w->buf_sd = calloc(2048, sizeof(char));
 	strcpy(w->buf_sd, data);
+	return w;
 }
 
 void init_workers(Client* c, int workers)
@@ -159,15 +161,15 @@ Client* init_client(int workers)
 	c->sockad.sin_port = htons(c->port);
 	c->sockad.sin_addr.s_addr = inet_addr(c->host);
 
-	init_workers(c, 3);
+	init_workers(c, workers);
 	return c;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-	Client*		c;
+	Client*	c;
 
-	c = init_client(3);
+	c = init_client(1);
 	start_workers(c);
 	free_client(c);
 	return 0;

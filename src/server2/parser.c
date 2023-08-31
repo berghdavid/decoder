@@ -273,7 +273,7 @@ int parse_package(Data* data, char* pack)
 	char*		buf;
 
 	if (strlen(pack) < 15 || pack[0] != '$' || pack[1] != '$') {
-		fprintf(stderr,	"Error when parsing '%s'.\n", pack);
+		fprintf(stderr,	"Error - no initial $$ in package '%s'\n", pack);
 		return 1;
 	}
 
@@ -285,7 +285,7 @@ int parse_package(Data* data, char* pack)
 				/* Skip $$ */
 				buf += 2;
 				if (sscanf (buf, "%i", &data->pack_len) != 1) {
-					fprintf(stderr, "Error - Packet length '%s' not an integer.\n", buf);
+					fprintf(stderr, "Error - pack_len '%s' is not an integer.\n", buf);
 					return 1;
 				}
 				break;

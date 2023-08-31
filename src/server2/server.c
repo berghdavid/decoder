@@ -34,6 +34,7 @@ int init_curl(Server* server)
 	CURL*		curl;
 	CurlSlist*	slist;
 	
+	curl_global_init(CURL_GLOBAL_DEFAULT);
 	curl = curl_easy_init();
 	slist = NULL;
 	if (!curl) {
@@ -184,8 +185,7 @@ int forward_data(Worker* w)
 	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, w->data->json);
 	res = curl_easy_perform(w->server->curl);
 	if (res != CURLE_OK) {
-		fprintf(stderr, "Error - curl_easy_perform() failed: %s\n",
-			curl_easy_strerror(res));
+		fprintf(stderr, "Error - %s\n", curl_easy_strerror(res));
 	}
 	return res == CURLE_OK;
 }
