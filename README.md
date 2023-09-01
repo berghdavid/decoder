@@ -18,3 +18,11 @@ Listen to port:
 ```bash
 nc -l -p 5111
 ```
+
+## Parameters
+When runnning the server there are a couple of customizable parameters.
+ - Port: Which port to listen to.
+ - Pending: How many pending requests to allow before denying.
+ - Max buffer size: Amount of bytes to allow to be parsed and sent.
+ - Reuse port: Set to 1 when rerunning frequently to get past socket lingering time.
+ - Forward url: Which address to send the decoded data to.
