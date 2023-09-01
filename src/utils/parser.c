@@ -30,7 +30,7 @@ Data* init_data(int max_buf)
 	data->cmd_code_s = 4;
 	data->para_str_s = max_buf;
 	data->checksum_s = 3;
-	data->json_s = max_buf;
+	data->json_s = max_buf + 1000;
 
 	data->id = calloc(data->id_s, sizeof(char));
 	data->work_nb = calloc(data->work_nb_s, sizeof(char));
@@ -39,34 +39,6 @@ Data* init_data(int max_buf)
 	data->checksum = calloc(data->checksum_s, sizeof(char));
 	data->json = calloc(data->json_s, sizeof(char));
 	return data;
-}
-
-void build_forward_req(Data* data)
-{
-	/* TODO: Swap custom JSON formatting for a json lib */
-
-	snprintf(data->json, data->json_s,
-		"{"
-			"\"protocol\": \"Traccar\","
-			//"\"host\": \"%s\"",
-			"\"topic\": \"device/%s\","
-			"\"data\": {"
-				"\"position\": {"
-					//"\"latitude\": \"%s\"",
-					//"\"longitude\": \"%s\"",
-					"\"device_time\": \"%s\","
-				"},"
-				"\"event\": {"
-				"},"
-				"\"device\": {"
-					"\"name\": \"%s\","
-					"\"uniqueId\": \"%s\","
-					//"\"status\": \"\","
-				"}"
-			"}"
-		"}",
-		data->id, data->id, data->id, data->id
-	);
 }
 
 void free_params(Data* data)

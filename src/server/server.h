@@ -39,6 +39,30 @@ struct Worker {
 
 void close_server(Server* server);
 
+/**
+ * @brief Appends a key-value pair to where the cur* points to. Will only append
+ * until the end* pointer and no further to prevent mem-leaks.
+ * 
+ * Returns how many chars were appended.
+ */
+int concat_json(char* cur, const char* end, char* key, char* val);
+
+/**
+ * @brief Builds the json which will be forwarded according to the format below:
+ * 
+ * {
+ * 	"data": {
+ * 		"signals": {
+ * 			"param1": "value1",
+ * 			"param2": "value2",
+ * 			...
+ * 		}
+ * 	}
+ * }
+ * 
+ */
+void build_forward_req(Worker* data);
+
 void reset_data(Worker* w);
 
 Server* init_server(int argc, char* argv[]);

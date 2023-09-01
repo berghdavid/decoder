@@ -63,6 +63,37 @@ void worker_log(Worker* w, char* other, char* log)
 	}
 }
 
+int concat_json(char* cur, const char* end, char* key, char* val)
+{
+	return snprintf(cur, end - cur, ", \"%s\": \"%s\"", key, val);
+}
+
+void build_forward_req(Worker* w)
+{
+	Param*		p;
+	Data*		d;
+	char*		cur;
+	const char*	end;
+
+	d = w->data;
+	cur = d->json;
+	end = d->json + d->json_s;
+
+	cur += snprintf(cur, end - cur,
+		"{\"data\": {\"signals\": {\"pack-len\": \"%d\",", d->pack_len);
+	cur += concat_json(cur, end, "id", d->id);
+	cur += concat_json(cur, end, "work-no", d->work_nb);
+	cur += concat_json(cur, end, "cmd-code", d->cmd_code);
+	cur += concat_json(cur, end, "checksum", d->checksum);
+
+	p = d->cmd_para;
+	while ((p = p->next) != NULL) {
+		cur += concat_json(cur, end, p->key, p->val);
+	}
+
+	strcat(w->data->json, "}}}");
+}
+
 void close_server(Server* server)
 {
 	int	i;
@@ -301,8 +332,11 @@ void* work(void* arg)
 			worker_log(w, "> fifo", w->buf_sd);
 		}
 		close(w->socket);
-		build_forward_req(w->data);
+		build_forward_req(w);
 		forward_data(w);
+		if (w->buf_rc[0] == 'q') {
+			return NULL;
+		}
 		reset_data(w);
 	}
 	return NULL;
