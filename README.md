@@ -1,5 +1,5 @@
 # Server-Client
-Fifo protocol decoder server implementated in C.
+Fifo protocol decoder server implemented in C.
 
 ## Run in Docker
  - `docker compose up -d --build`
