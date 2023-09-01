@@ -65,7 +65,7 @@ void worker_log(Worker* w, char* other, char* log)
 
 int concat_json(char* cur, const char* end, char* key, char* val)
 {
-	return snprintf(cur, end - cur, ", '%s': '%s'", key, val);
+	return snprintf(cur, end - cur, ", \"%s\": \"%s\"", key, val);
 }
 
 void build_forward_req(Worker* w)
@@ -80,7 +80,7 @@ void build_forward_req(Worker* w)
 	end = d->json + d->json_s;
 
 	cur += snprintf(cur, end - cur,
-		"{'data': {'signals': {'pack-len': '%d'", d->pack_len);
+		"{\"data\": {\"signals\": {\"pack-len\": \"%d\"", d->pack_len);
 	cur += concat_json(cur, end, "id", d->id);
 	cur += concat_json(cur, end, "work-no", d->work_nb);
 	cur += concat_json(cur, end, "cmd-code", d->cmd_code);
