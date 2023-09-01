@@ -87,8 +87,9 @@ void build_forward_req(Worker* w)
 	cur += concat_json(cur, end, "checksum", d->checksum);
 
 	p = d->cmd_para;
-	while ((p = p->next) != NULL) {
+	while (p != NULL) {
 		cur += concat_json(cur, end, p->key, p->val);
+		p = p->next;
 	}
 
 	strcat(w->data->json, "}}}");
