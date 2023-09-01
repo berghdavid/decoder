@@ -316,6 +316,7 @@ void reset_data(Worker* w)
 void* work(void* arg)
 {
 	Worker*	w;
+	int	res;
 	
 	w = (Worker*) arg;
 	worker_log(w, "", "Accepting clients");
@@ -327,16 +328,16 @@ void* work(void* arg)
 			continue;
 		}
 		worker_log(w, "< fifo", w->buf_rc);
-		if (parse_package(w->data, w->buf_rc) == 0) {
+		res = parse_package(w->data, w->buf_rc);
+		if (res == 0) {
 			build_response(w);
 			send(w->socket, w->buf_sd, w->server->buf_s * sizeof(char), 0);
 			worker_log(w, "> fifo", w->buf_sd);
 		}
 		close(w->socket);
-		build_forward_req(w);
-		forward_data(w);
-		if (w->buf_rc[0] == 'q') {
-			return NULL;
+		if (res == 0) {
+			build_forward_req(w);
+			forward_data(w);
 		}
 		reset_data(w);
 	}
