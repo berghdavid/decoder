@@ -13,7 +13,6 @@ services:
       - PENDING=512
       - MAX_BUF=2048
       - REUSE=0
-      - FORWARD=host.docker.internal:5111
-      #- FORWARD=https://online.staging.traxmate.io:8000
+      - FORWARD=https://online.staging.traxmate.io:8000
     extra_hosts:
     - "host.docker.internal:host-gateway"

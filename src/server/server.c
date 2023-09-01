@@ -132,7 +132,7 @@ int init_curl(Server* server)
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 	/* TODO: Pass connection timeout limits as parameters */
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1L);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3L);
 	curl_easy_setopt(curl, CURLOPT_URL, server->forwrd);
 	server->curl = curl;
 	server->slist = slist;
