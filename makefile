@@ -11,6 +11,8 @@ PARSER = src/utils/parser.c
 QUEUE = src/utils/queue.c
 LOGGER = src/utils/logger.c
 
+PARAMS = 5124 100 2048 1 localhost:5111
+
 all: clients server debug_server debug_clients
 
 # Clients
@@ -30,13 +32,13 @@ debug_clients: $(CLIENTS) $(UTILS)
 # Server
 
 run_server: server
-	./server 5124 100 2048 1 localhost:5111
+	./server $(PARAMS)
 
 server: $(SERVER) $(PARSER) $(LOGGER)
 	$(CC) -o server $(CFLAGS) $(OPT_FLAGS) $(SERVER) $(PARSER) $(LOGGER) $(LDFLAGS)
 
 valgrind_server: debug_server
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server 5124 100 2048 1 localhost:5111
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server $(PARAMS)
 
 debug_server: $(SERVER) $(PARSER) $(LOGGER)
 	$(CC) -o d_server $(DEBUG_FLAGS) $(CFLAGS) $(SERVER) $(PARSER) $(LOGGER) $(LDFLAGS)
