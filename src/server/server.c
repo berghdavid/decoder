@@ -1,13 +1,44 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
-#include <curl/curl.h>
+#include <unistd.h>
+
 #include <arpa/inet.h>
+#include <curl/curl.h>
+
 #include "server.h"
 #include "../utils/parser.h"
 #include "../utils/logger.h"
+
+char* get_ip_addr()
+{
+	FILE*	fp;
+	char*	command = "ifconfig | grep 'inet ' | awk '{print $2}' | cut -d':' -f2";
+	char*	ipAddress;
+	char*	newlinePos;
+	char	buffer[256];
+
+	fp = popen(command, "r");
+	ipAddress = NULL;
+	if (fp == NULL) {
+		log_msg(stderr, "Error - couldn't run 'popen()'");
+		return NULL;
+	}
+
+	if (fgets(buffer, sizeof(buffer), fp) != NULL) {
+		ipAddress = (char*) malloc(strlen(buffer) + 1);
+		if (ipAddress != NULL) {
+			strcpy(ipAddress, buffer);
+			newlinePos = strchr(ipAddress, '\n');
+			if (newlinePos != NULL) {
+				*newlinePos = '\0';
+			}
+		}
+	}
+	pclose(fp);
+	return ipAddress;
+}
 
 void worker_log(Worker* w, char* other, char* log)
 {
@@ -47,6 +78,8 @@ void close_server(Server* server)
 		free(server->worker[i]);
 	}
 	free(server->worker);
+	free(server->host);
+	free(server->forwrd);
 	free(server);
 	log_msg(stdout, "Server closed gracefully\n");
 }
@@ -80,9 +113,8 @@ Server* init_server(int argc, char* argv[])
 	Sokadin	server_addr;
 
 	/* TODO: Replace with defaults and argument parsing */
-	if (argc != 7) {
+	if (argc != 6) {
 		log_msg(stderr, "Missing parameters:\n");
-		log_msg(stderr, "\tHost: For example 127.0.0.1\n");
 		log_msg(stderr, "\tPort: For example 5124\n");
 		log_msg(stderr, "\tPending connections: For example 100\n");
 		log_msg(stderr, "\tMax buf_size: For example 2048\n");
@@ -99,34 +131,46 @@ Server* init_server(int argc, char* argv[])
 	server->port = 5124;
 	server->pend = 1;
 	server->reuse = 0;
+	server->forwrd = calloc(256, sizeof(char));
 	server->socket = socket(PF_INET, SOCK_STREAM, 0);
 
-	server->host = argv[1];
-	if (sscanf (argv[2], "%i", &server->port) != 1) {
+	server->host = get_ip_addr();
+	if (server->host == NULL) {
+		close_server(server);
+		exit(0);
+	}
+	if (sscanf(argv[1], "%i", &server->port) != 1) {
 		log_msg(stderr, "Error - port argument '%s' is not an integer.\n",
+			argv[1]);
+		close_server(server);
+		exit(0);
+	}
+	if (sscanf(argv[2], "%i", &server->pend) != 1) {
+		log_msg(stderr, "Error - pending argument '%s' is not an integer.\n",
 			argv[2]);
 		close_server(server);
 		exit(0);
 	}
-	if (sscanf (argv[3], "%i", &server->pend) != 1) {
-		log_msg(stderr, "Error - pending argument '%s' is not an integer.\n",
+	if (sscanf(argv[3], "%i", &server->buf_s) != 1) {
+		log_msg(stderr, "Error - buffer size argument '%s' is not an integer.\n",
 			argv[3]);
 		close_server(server);
 		exit(0);
 	}
-	if (sscanf (argv[4], "%i", &server->buf_s) != 1) {
-		log_msg(stderr, "Error - buffer size argument '%s' is not an integer.\n",
+	if (sscanf(argv[4], "%i", &server->reuse) != 1) {
+		log_msg(stderr, "Error - port reuse argument '%s' is neither 1 or 0.\n",
 			argv[4]);
 		close_server(server);
 		exit(0);
 	}
-	if (sscanf (argv[5], "%i", &server->reuse) != 1) {
-		log_msg(stderr, "Error - port reuse argument '%s' is neither 1 or 0.\n",
+	if (strlen(argv[5]) < 256) {
+		strcpy(server->forwrd, argv[5]);
+	} else {
+		log_msg(stderr, "Error - forward argument '%s' is larger than 256 bytes.\n",
 			argv[5]);
 		close_server(server);
 		exit(0);
 	}
-	server->forwrd = argv[6];
 
 	if (init_curl(server) != 0) {
 		log_msg(stderr, "Error - could not initialize curl connection to %s\n",
