@@ -1,4 +1,4 @@
-d_clients
-d_server
-clients
-server
+/d_clients
+/d_server
+/clients
+/server

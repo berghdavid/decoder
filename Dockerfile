@@ -8,5 +8,5 @@ FROM alpine
 RUN apk --no-cache add curl-dev
 COPY --from=build-env /app/server /app/server
 WORKDIR /app
-CMD ["/app/server", "127.0.0.1", "5124", "100", "2048", "1", "localhost:5111"]
-#CMD ["/app/server", "$HOST", "$PORT", "$PENDING", "$MAX_BUF", "$REUSE", "$FORWARD"]
+EXPOSE 5124
+CMD /app/server $HOST $PORT $PENDING $MAX_BUF $REUSE $FORWARD

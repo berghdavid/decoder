@@ -7,11 +7,14 @@ services:
     container_name: fifo-c
     image: fifo-i
     ports:
-      - 5124:5124
+      - "5124:5124"
     environment:
       - HOST=127.0.0.1
       - PORT=5124
       - PENDING=512
       - MAX_BUF=2048
-      - REUSE=1
-      - FORWARD=localhost:5111
+      - REUSE=0
+      - FORWARD=host.docker.internal:5111
+      # - FORWARD=https://online.staging.traxmate.io:8000
+    extra_hosts:
+    - "host.docker.internal:host-gateway"

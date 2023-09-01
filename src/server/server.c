@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include "server.h"
 #include "../utils/parser.h"
+#include "../utils/logger.h"
 
 void worker_log(Worker* w, char* other, char* log)
 {
@@ -19,15 +20,15 @@ void worker_log(Worker* w, char* other, char* log)
 	time(&curr_t);
 	info_t = localtime(&curr_t);
 	strftime(t_str, sizeof(t_str), "%Y-%m-%d %H:%M:%S", info_t);
-	printf("%s [ Worker %d %s ]: ", t_str, w->id, other);
+	log_msg(stdout, "%s [ Worker %d %s ]: ", t_str, w->id, other);
 
 	str = log;
 	len = strlen(str);
 	if (len >= 2 && str[len - 2] == '\r' && str[len - 1] == '\n') {
 		/* Print the string without the last two characters */
-		printf("%.*s\n", (int) (len - 2), str);
+		log_msg(stdout, "%.*s\n", (int) (len - 2), str);
 	} else {
-		printf("%s\n", str);
+		log_msg(stdout, "%s\n", str);
 	}
 }
 
@@ -47,7 +48,7 @@ void close_server(Server* server)
 	}
 	free(server->worker);
 	free(server);
-	printf("Server closed gracefully\n");
+	log_msg(stdout, "Server closed gracefully\n");
 }
 
 int init_curl(Server* server)
@@ -65,10 +66,8 @@ int init_curl(Server* server)
 	slist = curl_slist_append(slist, "Accept: application/json");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 	/* TODO: Pass connection timeout limits as parameters */
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1L);
-	/* TODO: Pass URL as parameter */
-	//curl_easy_setopt(curl, CURLOPT_URL, "https://online.staging.traxmate.io:8000");
 	curl_easy_setopt(curl, CURLOPT_URL, server->forwrd);
 	server->curl = curl;
 	server->slist = slist;
@@ -82,17 +81,18 @@ Server* init_server(int argc, char* argv[])
 
 	/* TODO: Replace with defaults and argument parsing */
 	if (argc != 7) {
-		fprintf(stderr, "Missing parameters:\n");
-		fprintf(stderr, "\tHost: For example 127.0.0.1\n");
-		fprintf(stderr, "\tPort: For example 5124\n");
-		fprintf(stderr, "\tPending connections: For example 100\n");
-		fprintf(stderr, "\tMax buf_size: For example 2048\n");
-		fprintf(stderr, "\tReuse port: 0 or 1\n");
-		fprintf(stderr, "\tForward url: For example localhost:80\n");
+		log_msg(stderr, "Missing parameters:\n");
+		log_msg(stderr, "\tHost: For example 127.0.0.1\n");
+		log_msg(stderr, "\tPort: For example 5124\n");
+		log_msg(stderr, "\tPending connections: For example 100\n");
+		log_msg(stderr, "\tMax buf_size: For example 2048\n");
+		log_msg(stderr, "\tReuse port: 0 or 1\n");
+		log_msg(stderr, "\tForward url: For example localhost:80\n");
 		exit(0);
 	}
 
 	server = malloc(sizeof(Server));
+	/* Default values to be overridden by argv[] */
 	server->worker = NULL;
 	server->work_s = 0;
 	server->host = NULL;
@@ -103,29 +103,36 @@ Server* init_server(int argc, char* argv[])
 
 	server->host = argv[1];
 	if (sscanf (argv[2], "%i", &server->port) != 1) {
-		fprintf(stderr, "Error - port argument not an integer.\n");
+		log_msg(stderr, "Error - port argument '%s' is not an integer.\n",
+			argv[2]);
 		close_server(server);
 		exit(0);
 	}
 	if (sscanf (argv[3], "%i", &server->pend) != 1) {
-		fprintf(stderr, "Error - pending argument not an integer.\n");
+		log_msg(stderr, "Error - pending argument '%s' is not an integer.\n",
+			argv[3]);
 		close_server(server);
 		exit(0);
 	}
 	if (sscanf (argv[4], "%i", &server->buf_s) != 1) {
-		fprintf(stderr, "Error - buffer size argument not an integer.\n");
+		log_msg(stderr, "Error - buffer size argument '%s' is not an integer.\n",
+			argv[4]);
 		close_server(server);
 		exit(0);
 	}
 	if (sscanf (argv[5], "%i", &server->reuse) != 1) {
-		fprintf(stderr, "Error - port reuse is not an integer.\n");
+		log_msg(stderr, "Error - port reuse argument '%s' is neither 1 or 0.\n",
+			argv[5]);
 		close_server(server);
 		exit(0);
 	}
 	server->forwrd = argv[6];
 
 	if (init_curl(server) != 0) {
+		log_msg(stderr, "Error - could not initialize curl connection to %s\n",
+			server->forwrd);
 		close_server(server);
+		exit(0);
 	}
 
 	memset(&server_addr, '\0', sizeof(server_addr));
@@ -136,18 +143,26 @@ Server* init_server(int argc, char* argv[])
 
 	if (setsockopt(server->socket, SOL_SOCKET, SO_REUSEADDR, &server->reuse,
 		sizeof(int)) < 0) {
-		fprintf(stderr, "Error - Unable to set SO_REUSEADDR option.\n");
+		log_msg(stderr, "Error - Unable to set SO_REUSEADDR option.\n");
 		close_server(server);
 		exit(0);
 	}
 
 	if (bind(server->socket, (struct sockaddr*) &server_addr,
 		sizeof(server_addr)) != 0) {
-		fprintf(stderr, "Error - Unsuccessfully bound to socket.\n");
+		log_msg(stderr,
+			"Error - Unsuccessfully bound to socket at '%s:%d'\n",
+			server->host, server->port);
 		close_server(server);
 		exit(0);
 	}
-	listen(server->socket, server->pend);
+
+	if (listen(server->socket, server->pend) != 0) {
+		log_msg(stderr,	"Error - Unsuccessfully listened to socket "
+			"with max '%d' pending connections\n", server->pend);
+		close_server(server);
+		exit(0);
+	}
 	return server;
 }
 
@@ -194,7 +209,7 @@ void build_response(Worker* w)
 	if (strcmp(w->data->cmd_code, "A03") == 0) {
 		response_A03(w);
 	} else if (strcmp(w->data->cmd_code, "A10") == 0) {
-		/* There is no response to A10 heartbeat */
+		/* Fifo protocol says no response to A10 heartbeat signal */
 		return;
 	}
 }
@@ -203,7 +218,7 @@ int forward_data(Worker* w)
 {
 	CURLcode	res;
 
-	/* TODO: Make thread-safe */
+	/* TODO: Make thread-safe if multithreading */
 
 	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, w->data->json);
 	res = curl_easy_perform(w->server->curl);
@@ -211,7 +226,7 @@ int forward_data(Worker* w)
 		worker_log(w, "> forw", w->data->json);
 		return 0;
 	}
-	fprintf(stderr, "Error - curl forward failed: %s\n", curl_easy_strerror(res));
+	log_msg(stderr, "Warning - curl forward failed: %s\n", curl_easy_strerror(res));
 	return 1;
 }
 
@@ -227,13 +242,12 @@ void* work(void* arg)
 	Worker*	w;
 	
 	w = (Worker*) arg;
-	printf("Worker %d is accepting clients at %s:%d\n",
-		w->id, w->server->host, w->server->port);
+	worker_log(w, "", "Accepting clients");
 
 	while (1) {
 		w->socket = accept(w->server->socket, w->addr, &w->addr_s);
 		if (recv(w->socket, w->buf_rc, w->server->buf_s * sizeof(char), 0) == -1) {
-			fprintf(stderr,	"Error - worker %d could not receive.\n", w->id);
+			log_msg(stderr,	"Error - worker %d could not receive.\n", w->id);
 			continue;
 		}
 		worker_log(w, "< fifo", w->buf_rc);
@@ -246,10 +260,6 @@ void* work(void* arg)
 		build_forward_req(w->data);
 		forward_data(w);
 		reset_data(w);
-		if (w->buf_rc[0] == 'q') {
-			/* TODO: Remove this quit condition */
-			break;
-		}
 	}
 	return NULL;
 }
@@ -283,9 +293,18 @@ void init_workers(Server* server, int workers)
 
 void start_server(Server* server)
 {
-	/* TODO: Multithreading =) */
 	int	i;
 
+	log_msg(stdout, " ------------- Starting server -------------\n");
+	log_msg(stdout, "\tHOST: %s\n", server->host);
+	log_msg(stdout, "\tPORT: %d\n", server->port);
+	log_msg(stdout, "\tPENDING: %d\n", server->pend);
+	log_msg(stdout, "\tMAX_BUF: %d\n", server->buf_s);
+	log_msg(stdout, "\tREUSE: %d\n", server->reuse);
+	log_msg(stdout, "\tFORWARD: %s\n", server->forwrd);
+	log_msg(stdout, " -------------------------------------------\n");
+
+	/* TODO: Multithreading =) */
 	for (i = 0; i < server->work_s; i++) {
 		work(server->worker[i]);
 	}
