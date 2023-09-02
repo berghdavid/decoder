@@ -11,7 +11,7 @@ PARSER = src/utils/parser.c
 QUEUE = src/utils/queue.c
 LOGGER = src/utils/logger.c
 
-PARAMS = 5124 100 2048 1 localhost:5111
+PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111 -k example-key
 
 all: clients server debug_server debug_clients
 

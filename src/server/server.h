@@ -17,6 +17,7 @@ struct Server {
 	Worker**	worker;	/* Points to array of worker pointers	*/
 	char*		host;	/* For example '127.0.0.1'		*/
 	char*		forwrd;	/* Curl forwarding address		*/
+	char*		key;	/* Api key				*/
 	int		work_s;	/* Number of workers			*/
 	int		port;	/* For example 5124			*/
 	int		pend;	/* Max number of pending connections	*/
