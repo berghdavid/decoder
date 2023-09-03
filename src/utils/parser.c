@@ -103,6 +103,7 @@ Param* parse_gps(Param* fix_flag)
 		if (p == NULL) {
 			break;
 		}
+		p->key = calloc(strlen(PARAMS_GPS[i]) + 1, sizeof(char));
 		strcpy(p->key, PARAMS_GPS[i]);
 		p = p->next;
 	}
@@ -115,6 +116,7 @@ Param* parse_wifi(Param* fix_flag)
 
 	p = fix_flag->next;
 	if (p != NULL) {
+		p->key = calloc(strlen(PARAMS_WIFI[0]) + 1, sizeof(char));
 		strcpy(p->key, PARAMS_WIFI[0]);
 	}
 	return p->next;
@@ -129,9 +131,11 @@ void parse_cmd_A03(Data* data)
 	i = 0;
 	while (p != NULL) {
 		if (i < 6) {
+			p->key = calloc(strlen(PARAMS_A03[i]) + 1, sizeof(char));
 			strcpy(p->key, PARAMS_A03[i]);
 		} else if (i == 6) {
 			/* loc-type */
+			p->key = calloc(strlen(PARAMS_A03[i]) + 1, sizeof(char));
 			strcpy(p->key, PARAMS_A03[i]);
 			if (*p->val == '0') {
 				p = parse_gps(p);
@@ -140,6 +144,7 @@ void parse_cmd_A03(Data* data)
 			}
 			continue;
 		} else if (i == 7) {
+			p->key = calloc(strlen(PARAMS_A03[i]) + 1, sizeof(char));
 			strcpy(p->key, PARAMS_A03[i]);
 			break;
 		}
@@ -158,6 +163,7 @@ void parse_cmd_A10(Data* data)
 		if (p == NULL) {
 			break;
 		}
+		p->key = calloc(strlen(PARAMS_A10[i]) + 1, sizeof(char));
 		strcpy(p->key, PARAMS_A10[i]);
 		p = p->next;
 	}
@@ -193,9 +199,8 @@ void parse_params(Data* data)
 			first = 0;
 		}
 		p->next = NULL;
-		p->key = calloc(512, sizeof(char));
-		p->val = calloc(512, sizeof(char));
-		strcpy(p->key, "\0");
+		p->key = NULL;
+		p->val = calloc(1, sizeof(char));
 		strcpy(p->val, "\0");
 		buf++;
 	}
@@ -208,10 +213,13 @@ void parse_params(Data* data)
 			data->cmd_para = p;
 			first = 0;
 		}
-		p->key = calloc(512, sizeof(char));
-		p->val = calloc(512, sizeof(char));
-		if (copy_str(p->val, 512, buf)) {
-			fprintf(stderr, "Error - parameter: '%s' is larger than 512 bytes.\n", buf);
+		p->key = NULL;
+		if (strlen(buf) < 1024) {
+			p->val = calloc(strlen(buf) + 1, sizeof(char));
+			strcpy(p->val, buf);
+		} else {
+			p->val = NULL;
+			fprintf(stderr, "Error - parameter: '%s' exceeds 1024 bytes.\n", buf);
 		}
 		buf = strtok(NULL, com_s);
 	}

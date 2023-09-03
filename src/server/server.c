@@ -292,7 +292,9 @@ void build_forward_req(Worker* w)
 
 	p = d->cmd_para;
 	while (p != NULL) {
-		cur += concat_json(cur, end, p->key, p->val);
+		if (p->key != NULL) {
+			cur += concat_json(cur, end, p->key, p->val);
+		}
 		p = p->next;
 	}
 
@@ -395,10 +397,6 @@ void* work(void* arg)
 		if (res == 0 && w->server->forwrd != NULL) {
 			build_forward_req(w);
 			forward_data(w);
-		}
-		if (w->buf_rc[0] == 'q') {
-			close_server(w->server);
-			exit(0);
 		}
 		reset_data(w);
 	}
