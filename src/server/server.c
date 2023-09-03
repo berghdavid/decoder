@@ -64,18 +64,32 @@ void worker_log(Worker* w, char* other, char* log)
 	}
 }
 
+void reformat_forw(Server* server)
+{
+	char*	cur;
+	char*	end;
+	int	new_s;
+
+	/* + 2 for '/' and '\0' */
+	new_s = strlen(server->forwrd) + strlen(server->key) + 2;
+	server->forwrd = realloc(server->forwrd, new_s * sizeof(char));
+	cur = server->forwrd + strlen(server->forwrd);
+	end = server->forwrd + new_s;
+
+	snprintf(cur, end - cur, "/%s", server->key);
+}
+
 void parse_args(Server* server, int argc, char* argv[])
 {
 	int	opt;
 	int	long_i;
 	static struct option long_options[] = {
-		{"port",	no_argument,	0,	'P'},
-		{"pending",	no_argument,	0,	'p'},
-		{"max_buf",	no_argument,	0,	'b'},
-		{"reuse port",	no_argument,	0,	'r'},
-		{"forward",	no_argument,	0,	'f'},
-		{"api_key",	no_argument,	0,	'k'},
-		{0,		0,		0,	0  }
+		{"port",	required_argument,	0,	'P'},
+		{"pending",	no_argument,		0,	'p'},
+		{"max_buf",	no_argument,		0,	'b'},
+		{"reuse port",	no_argument,		0,	'r'},
+		{"forward",	no_argument,		0,	'f'},
+		{"api_key",	no_argument,		0,	'k'}
 	};
 	
 	opt = 0;
@@ -128,6 +142,10 @@ void parse_args(Server* server, int argc, char* argv[])
 		close_server(server);
 		exit(1);
 	}}
+
+	if (server->forwrd != NULL && server->key != NULL) {
+		reformat_forw(server);
+	}
 }
 
 void close_server(Server* server)
@@ -378,6 +396,10 @@ void* work(void* arg)
 			build_forward_req(w);
 			forward_data(w);
 		}
+		if (w->buf_rc[0] == 'q') {
+			close_server(w->server);
+			exit(0);
+		}
 		reset_data(w);
 	}
 	return NULL;
@@ -425,7 +447,7 @@ void start_server(Server* server)
 	} else {
 		log_msg(stdout, "\tFORWARD: %s\n", "None");
 	}
-	if (server->forwrd != NULL) {
+	if (server->key != NULL) {
 		log_msg(stdout, "\tAPI_KEY: %s\n", server->key);
 	} else {
 		log_msg(stdout, "\tAPI_KEY: %s\n", "None");
