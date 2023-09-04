@@ -4,16 +4,21 @@ LDFLAGS=-lm -pthread -lcurl
 OPT_FLAGS=-O3
 DEBUG_FLAGS=-ggdb3
 
-CLIENTS = $(wildcard src/clients/*.c)
-SERVER = $(wildcard src/server/*.c)
-UTILS = $(wildcard src/utils/*.c)
-PARSER = src/utils/parser.c
-QUEUE = src/utils/queue.c
-LOGGER = src/utils/logger.c
+CLIENTS = $(wildcard src/c/clients/*.c)
+SERVER = $(wildcard src/c/server/*.c)
+UTILS = $(wildcard src/c/utils/*.c)
+PARSER = src/c/utils/parser.c
+QUEUE = src/c/utils/queue.c
+LOGGER = src/c/utils/logger.c
 
 PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111 -k 1
 
 all: clients server debug_server debug_clients
+
+# Docker
+
+image:
+	docker build -t fifo .
 
 # Clients
 
@@ -46,7 +51,7 @@ debug_server: $(SERVER) $(PARSER) $(LOGGER)
 # Python server
 
 py_server:
-	python3 src/py-server/server.py
+	python3 src/py/server.py
 
 # Cleanup
 
