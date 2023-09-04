@@ -173,7 +173,7 @@ Client* init_client(int workers)
 
 	c = malloc(sizeof(Client));
 	c->buf_s = 2048;
-	c->host = "172.21.48.184";
+	c->host = "localhost";
 	c->port = 5124;
 	c->work_s = 0;
 	c->worker = NULL;

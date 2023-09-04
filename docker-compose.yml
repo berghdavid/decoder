@@ -13,6 +13,7 @@ services:
       - PENDING=512
       - MAX_BUF=2048
       - REUSE=0
-      - FORWARD=https://online.staging.traxmate.io:8000
+      - FORWARD=localhost:5111
+      - API_KEY=1
     extra_hosts:
     - "host.docker.internal:host-gateway"
