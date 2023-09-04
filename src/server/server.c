@@ -127,7 +127,11 @@ void parse_args(Server* server, int argc, char* argv[])
 		}
 		break;
 	default:
-		log_msg(stdout, "Usage: -P num -p num -b num -r num -f string -k num\n");
+		log_msg(stderr, "Could not parse the given parameters\n");
+		for (opt = 0; opt < argc; opt++) {
+			log_msg(stderr, "argv[%d]: %s\n", opt, argv[opt]);
+		}
+		log_msg(stderr, "Usage: -P num -p num -b num -r num -f string -k num\n");
 		close_server(server);
 		exit(1);
 	}}
