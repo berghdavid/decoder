@@ -2,3 +2,4 @@
 /d_server
 /clients
 /server
+src/py-server/__pycache__*

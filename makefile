@@ -43,6 +43,11 @@ valgrind_server: debug_server
 debug_server: $(SERVER) $(PARSER) $(LOGGER)
 	$(CC) -o d_server $(DEBUG_FLAGS) $(CFLAGS) $(SERVER) $(PARSER) $(LOGGER) $(LDFLAGS)
 
+# Python server
+
+py_server:
+	python3 src/py-server/server.py
+
 # Cleanup
 
 clean: all
