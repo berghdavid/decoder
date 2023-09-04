@@ -351,8 +351,8 @@ int forward_data(Worker* w)
 
 void reset_data(Worker* w)
 {
-	/* TODO: Maybe skip string reset */
-	memset(w->buf_sd, 0, strlen(w->buf_sd));
+	memset(w->buf_rc, '\0', w->server->buf_s);
+	memset(w->buf_sd, '\0', w->server->buf_s);
 	free_params(w->data);
 }
 
