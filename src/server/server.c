@@ -64,32 +64,17 @@ void worker_log(Worker* w, char* other, char* log)
 	}
 }
 
-void reformat_forw(Server* server)
-{
-	char*	cur;
-	char*	end;
-	int	new_s;
-
-	/* + 2 for '/' and '\0' */
-	new_s = strlen(server->forwrd) + strlen(server->key) + 2;
-	server->forwrd = realloc(server->forwrd, new_s * sizeof(char));
-	cur = server->forwrd + strlen(server->forwrd);
-	end = server->forwrd + new_s;
-
-	snprintf(cur, end - cur, "/%s", server->key);
-}
-
 void parse_args(Server* server, int argc, char* argv[])
 {
 	int	opt;
 	int	long_i;
 	static struct option long_options[] = {
-		{"port",	required_argument,	0,	'P'},
-		{"pending",	no_argument,		0,	'p'},
-		{"max_buf",	no_argument,		0,	'b'},
-		{"reuse port",	no_argument,		0,	'r'},
-		{"forward",	no_argument,		0,	'f'},
-		{"api_key",	no_argument,		0,	'k'}
+		{"port",	no_argument,	0,	'P'},
+		{"pending",	no_argument,	0,	'p'},
+		{"max_buf",	no_argument,	0,	'b'},
+		{"reuse port",	no_argument,	0,	'r'},
+		{"forward",	no_argument,	0,	'f'},
+		{"api_key",	no_argument,	0,	'k'}
 	};
 	
 	opt = 0;
@@ -134,69 +119,74 @@ void parse_args(Server* server, int argc, char* argv[])
 		strcpy(server->forwrd, optarg);
 		break;
 	case 'k':
-		server->key = calloc(strlen(optarg) + 1, sizeof(char));
-		strcpy(server->key, optarg);
+		if (sscanf(optarg, "%i", &server->id_key) != 1) {
+			log_msg(stderr, "Error - id key argument '%s' is neither 1 or 0.\n",
+				optarg);
+			close_server(server);
+			exit(0);
+		}
 		break;
 	default:
-		printf("Usage: -P num -p num -b num -r num -f string -k string\n");
+		log_msg(stdout, "Usage: -P num -p num -b num -r num -f string -k num\n");
 		close_server(server);
 		exit(1);
 	}}
-
-	if (server->forwrd != NULL && server->key != NULL) {
-		reformat_forw(server);
-	}
 }
 
 void close_server(Server* server)
 {
+	Worker*	w;
 	int	i;
 
 	shutdown(server->socket, SHUT_RDWR);
-	if (server->forwrd != NULL) {
-		/* Curl is only initialized if server->forwrd is set */
-		curl_slist_free_all(server->slist);
-		curl_easy_cleanup(server->curl);
-		curl_global_cleanup();
-	}
 	for (i = 0; i < server->work_s; i++) {
-		free_data(server->worker[i]->data);
-		free(server->worker[i]->buf_rc);
-		free(server->worker[i]->buf_sd);
-		free(server->worker[i]);
+		w = server->worker[i];
+		if (server->forwrd != NULL) {
+			/* Curl is only initialized if server->forwrd is set */
+			curl_slist_free_all(w->slist);
+			if (w->server->id_key != 0) {
+				/* Static curl url must be cleaned */
+				curl_easy_cleanup(w->curl);
+			}
+			free(w->forwrd);
+		}
+		free_data(w->data);
+		free(w->buf_rc);
+		free(w->buf_sd);
+		free(w);
+	}
+	if (server->forwrd != NULL) {
+		curl_global_cleanup();
 	}
 	free(server->worker);
 	free(server->host);
-	if (server->forwrd != NULL) {
-		free(server->forwrd);
-	}
-	if (server->key != NULL) {
-		free(server->key);
-	}
+	free(server->forwrd);
 	free(server);
 	log_msg(stdout, "Server closed gracefully\n");
 }
 
-int init_curl(Server* server)
+void set_curl_msg(Worker* w)
 {
-	CURL*		curl;
-	CurlSlist*	slist;
-	
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-	curl = curl_easy_init();
-	if (!curl) {
+	if (w->server->id_key != 0) {
+		snprintf(w->forwrd, w->forw_s, "%s/%s",	w->server->forwrd, w->data->id);
+	} else {
+		snprintf(w->forwrd, w->forw_s, "%s", w->server->forwrd);
+	}
+
+	/* Set url and data to send */
+	curl_easy_setopt(w->curl, CURLOPT_URL, w->forwrd);
+	curl_easy_setopt(w->curl, CURLOPT_POSTFIELDS, w->data->json);
+}
+
+int init_curl(Worker* w)
+{
+	w->curl = curl_easy_init();
+	if (!w->curl) {
 		return 1;
 	}
-	slist = NULL;
-	slist = curl_slist_append(slist, "Content-Type: application/json");
-	slist = curl_slist_append(slist, "Accept: application/json");
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	/* TODO: Pass connection timeout limits as parameters */
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3L);
-	curl_easy_setopt(curl, CURLOPT_URL, server->forwrd);
-	server->curl = curl;
-	server->slist = slist;
+	curl_easy_setopt(w->curl, CURLOPT_HTTPHEADER, w->slist);
+	curl_easy_setopt(w->curl, CURLOPT_CONNECTTIMEOUT, 3L);
+	curl_easy_setopt(w->curl, CURLOPT_TIMEOUT, 3L);
 	return 0;
 }
 
@@ -246,23 +236,12 @@ Server* init_server(int argc, char* argv[])
 	server->buf_s = 2048;
 	server->pend = 256;
 	server->reuse = 0;
-	server->key = NULL;
+	server->id_key = 0;
 	server->forwrd = NULL;
-	server->curl = NULL;
-	server->slist = NULL;
 	server->socket = socket(PF_INET, SOCK_STREAM, 0);
 	server->host = get_ip_addr();
 
 	parse_args(server, argc, argv);
-
-	if (server->forwrd != NULL) {
-		if (init_curl(server) != 0) {
-			log_msg(stderr, "Error - could not initialize curl connection to %s\n",
-				server->forwrd);
-			close_server(server);
-			exit(0);
-		}
-	}
 	init_socket_connection(server);
 	return server;
 }
@@ -354,15 +333,16 @@ int forward_data(Worker* w)
 	CURLcode	res;
 
 	/* TODO: Make thread-safe if multithreading */
+	set_curl_msg(w);
+	res = curl_easy_perform(w->curl);
 
-	curl_easy_setopt(w->server->curl, CURLOPT_POSTFIELDS, w->data->json);
-	res = curl_easy_perform(w->server->curl);
-	if (res == CURLE_OK) {
-		worker_log(w, "> forw", w->data->json);
-		return 0;
+	if (res != CURLE_OK) {
+		log_msg(stderr, "Warning - curl forward to %s failed: %s\n",
+			w->forwrd, curl_easy_strerror(res));
+		return 1;
 	}
-	log_msg(stderr, "Warning - curl forward failed: %s\n", curl_easy_strerror(res));
-	return 1;
+	worker_log(w, "> forw", w->data->json);
+	return 0;
 }
 
 void reset_data(Worker* w)
@@ -394,7 +374,7 @@ void* work(void* arg)
 			worker_log(w, "> fifo", w->buf_sd);
 		}
 		close(w->socket);
-		if (res == 0 && w->server->forwrd != NULL) {
+		if (res == 0 && w->server->forwrd != NULL && w->curl) {
 			build_forward_req(w);
 			forward_data(w);
 		}
@@ -408,14 +388,40 @@ Worker* init_worker(int id, Server* server)
 	Worker*	w;
 
 	w = malloc(sizeof(Worker));
+	w->curl = NULL;
+	w->slist = NULL;
 	w->id = id;
 	w->server = server;
 	w->addr = NULL;
 	w->addr_s = 0;
 	w->socket = 0;
+	w->forwrd = NULL;
+	w->forw_s = 0;
 	w->data = init_data(server->buf_s);
 	w->buf_rc = calloc(server->buf_s, sizeof(char));
 	w->buf_sd = calloc(server->buf_s, sizeof(char));
+
+	if (w->server->forwrd != NULL) {
+		curl_global_init(CURL_GLOBAL_DEFAULT);
+		w->slist = curl_slist_append(w->slist, "Content-Type: application/json");
+		w->slist = curl_slist_append(w->slist, "Accept: application/json");
+
+		if (w->server->id_key != 0) {
+			/* Dynamic forward url, init curl when forwarding msg */
+			/* data->id_s includes '\0' char, +1 is for '/' sign */
+			w->forw_s = strlen(w->server->forwrd) + w->data->id_s + 1;
+			w->forwrd = calloc(w->forw_s, sizeof(char));
+		} else {
+			/* Static forward url, init curl on worker init */
+			w->forw_s = strlen(w->server->forwrd) + 1;
+			w->forwrd = calloc(w->forw_s, sizeof(char));
+		}
+		if (init_curl(w) != 0) {
+			log_msg(stderr, "Error - worker %d could not "
+				"initialize curl connection to %s\n",
+				w->id, server->forwrd);
+		}
+	}
 	return w;
 }
 
@@ -441,15 +447,15 @@ void start_server(Server* server)
 	log_msg(stdout, "\tMAX_BUF: %d\n", server->buf_s);
 	log_msg(stdout, "\tREUSE:   %d\n", server->reuse);
 	if (server->forwrd != NULL) {
-		log_msg(stdout, "\tFORWARD: %s\n", server->forwrd);
+		if (server->id_key != 0) {
+			log_msg(stdout, "\tFORWARD: %s/DEVICE_ID\n", server->forwrd);
+		} else {
+			log_msg(stdout, "\tFORWARD: %s\n", server->forwrd);
+		}
 	} else {
 		log_msg(stdout, "\tFORWARD: %s\n", "None");
 	}
-	if (server->key != NULL) {
-		log_msg(stdout, "\tAPI_KEY: %s\n", server->key);
-	} else {
-		log_msg(stdout, "\tAPI_KEY: %s\n", "None");
-	}
+	log_msg(stdout, "\tAPI_KEY: %d\n", server->id_key);
 	log_msg(stdout, " -------------------------------------------\n");
 
 	/* TODO: Multithreading =) */

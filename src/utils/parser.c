@@ -25,12 +25,12 @@ Data* init_data(int max_buf)
 	data->cmd_para = NULL;
 	data->pack_len = 0;
 
-	data->id_s = 19;
+	data->id_s = 20;	/* IMEISV has format AA-BBBBBB-CCCCCC-EE */
 	data->work_nb_s = 5;
 	data->cmd_code_s = 4;
 	data->para_str_s = max_buf;
 	data->checksum_s = 3;
-	data->json_s = max_buf + 1000;
+	data->json_s = max_buf + 512;
 
 	data->id = calloc(data->id_s, sizeof(char));
 	data->work_nb = calloc(data->work_nb_s, sizeof(char));

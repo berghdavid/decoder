@@ -12,12 +12,10 @@ typedef struct curl_slist CurlSlist; /* Built from <curl/curl.h> */
 
 /** Contains relevant server information */
 struct Server {
-	CURL*		curl;	/* Curl handle				*/
-	CurlSlist*	slist;	/* Slist headers for curl		*/
 	Worker**	worker;	/* Points to array of worker pointers	*/
 	char*		host;	/* For example '127.0.0.1'		*/
 	char*		forwrd;	/* Curl forwarding address		*/
-	char*		key;	/* Api key				*/
+	int		id_key;	/* Whether to use dynamic ID as url key	*/
 	int		work_s;	/* Number of workers			*/
 	int		port;	/* For example 5124			*/
 	int		pend;	/* Max number of pending connections	*/
@@ -28,28 +26,32 @@ struct Server {
 
 /** Stores all necessary data for worker thread. */
 struct Worker {
+	CURL*		curl;	/* Curl handle			*/
+	CurlSlist*	slist;	/* Slist headers for curl	*/
 	Server*		server;	/* Points to original server	*/
 	Sockaddr*	addr;	/* Open socket for sending data	*/
 	socklen_t	addr_s;	/* Length of peer address	*/
 	Data*		data;	/* Received package data	*/
-	int		socket;	/* Connected socket descriptor	*/
-	int		id;	/* Worker id			*/
 	char*		buf_rc;	/* Buffer for receiving data	*/
 	char*		buf_sd;	/* Buffer for sending data	*/
+	char*		forwrd;	/* Forwarding address		*/
+	int		forw_s;	/* Forwarding address size	*/
+	int		socket;	/* Connected socket descriptor	*/
+	int		id;	/* Worker id			*/
 };
 
 void close_server(Server* server);
 
 /**
- * @brief Appends a key-value pair to where the cur* points to. Will only append
+ * @brief Append a key-value pair to where the cur* points to. Will only append
  * until the end* pointer and no further to prevent mem-leaks.
  * 
- * Returns how many chars were appended.
+ * Return how many chars were appended.
  */
 int concat_json(char* cur, const char* end, char* key, char* val);
 
 /**
- * @brief Builds the json which will be forwarded according to the format below:
+ * @brief Build the json which will be forwarded according to the format below:
  * 
  * {
  * 	"data": {
