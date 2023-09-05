@@ -10,6 +10,8 @@ import requests
 class Protocol(ABC):
     """ Abstract class for parsing received data. """
 
+    # Dedicated port for this protocol
+    PORT: int
     # Contains all available parameters for a given protocol.
     ALL_PARAMS: [str]
 
@@ -57,8 +59,9 @@ class Protocol(ABC):
             if key in self.params:
                 # Double brackets in fstring => single bracket
                 new_url = new_url.replace(f"{{{{{key}}}}}", self.params[key])
+        json = {"data": {"signals": self.params}}
         try:
-            requests.post(new_url, json=self.params, timeout=3)
+            requests.post(new_url, json=json, timeout=1)
             self.log_event(f"> {new_url}", self.params)
         except requests.exceptions.RequestException as err:
             eprint(err)

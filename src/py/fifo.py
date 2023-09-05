@@ -8,6 +8,7 @@ from utils import eprint
 class Fifo(Protocol):
     """ Parses data according to Fifo protocol """
 
+    PORT = 5124
     ALL_PARAMS = [
         "pack-len", "id", "work-no", "cmd-code", "alm-code", "date-time",
         "MCC|MNC|LAC|CI", "bat-v", "bat-level", "status", "loc-type",

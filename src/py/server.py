@@ -17,20 +17,22 @@ class Server:
         self.host = ""
         self.s_socket = None
         self.c_socket = None
+        self.protocol.setup_forwarding(self.params["forward"])
+        self.init_socket()
 
     def init_socket(self):
         """ Start up socket connection """
         self.host = socket.gethostbyname(socket.gethostname())
         self.s_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.s_socket.bind((self.host, self.params["port"]))
+        self.s_socket.bind((self.host, self.protocol.PORT))
         self.s_socket.listen(self.params["pending"])
 
     def print_self(self):
         """ Print relevant information """
         print(" ------------- Starting server -------------")
         print(f"\thost:     {self.host}")
-        print(f"\tport:     {self.params['port']}")
+        print(f"\tport:     {self.protocol.PORT}")
         print(f"\tpending:  {self.params['pending']}")
         print(f"\tbuf_size: {self.params['buf_size']}")
         print(f"\treuse:    {self.params['reuse']}")
@@ -40,7 +42,6 @@ class Server:
     def run(self):
         """ Start server """
         protocol: Protocol = self.protocol
-        protocol.setup_forwarding(self.params["forward"])
         self.print_self()
         try:
             while True:
@@ -60,19 +61,16 @@ class Server:
 def main(argv):
     """ Main function """
     params = {
-        "port":     5124,
         "pending":  512,
         "buf_size": 2048,
         "reuse":    1,
         "forward":  ""
     }
     opts, _ = getopt.getopt(argv, "P:p:b:r:f:k:",
-        ["port=", "pending=", "buf_size=", "reuse=", "forward=", "api_key="])
+        ["pending=", "buf_size=", "reuse=", "forward=", "api_key="])
     try:
         for opt, arg in opts:
-            if opt in ("-P", "--port"):
-                params["port"] = int(arg)
-            elif opt in ("-p", "--pending"):
+            if opt in ("-p", "--pending"):
                 params["pending"] = int(arg)
             elif opt in ("-b", "--buf_size"):
                 params["buf_size"] = int(arg)
@@ -85,7 +83,6 @@ def main(argv):
         eprint("Pass arguments in format: P:p:b:r:f:k:")
         return
     server = Server(Fifo, params)
-    server.init_socket()
     server.run()
 
 if __name__ == "__main__":
