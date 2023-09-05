@@ -5,6 +5,7 @@ Abstract class for parsing received data.
 import re
 from abc import ABC, abstractmethod
 from utils import eprint
+import requests
 
 class Protocol(ABC):
     """ Abstract class for parsing received data. """
@@ -18,8 +19,13 @@ class Protocol(ABC):
         self.send: str = ""
         self.forw: str = ""
         self.params: dict = {}
+        self.keys: [str] = []
         for element in self.ALL_PARAMS:
             self.params[element] = ""
+
+    def log_event(self, descript, data):
+        """ Print connection accepted """
+        print(f"[ Server {descript} ]: {data.strip()}")
 
     def setup_forwarding(self, forw: str) -> bool:
         """
@@ -38,15 +44,24 @@ class Protocol(ABC):
                        f"{self.__class__.__name__}. Disabling data forwarding.")
                 self.forw = ""
                 return False
+            self.keys.append(hit)
         self.forw = forw
         return True
 
     def forward_data(self):
         """ Forward all data to the forwarding url """
-        # TODO: Fix forwarding, probably using CURL
         if self.forw == "":
             return
-        print("Sending stuff...")
+        new_url = self.forw
+        for key in self.keys:
+            if key in self.params:
+                # Double brackets in fstring => single bracket
+                new_url = new_url.replace(f"{{{{{key}}}}}", self.params[key])
+        try:
+            requests.post(new_url, json=self.params, timeout=3)
+            self.log_event(f"> {new_url}", self.params)
+        except requests.exceptions.RequestException as err:
+            eprint(err)
 
     @abstractmethod
     def parse_data(self, rec: str) -> bool:

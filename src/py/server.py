@@ -37,11 +37,6 @@ class Server:
         print(f"\tforward:  {self.protocol.forw}")
         print(" -------------------------------------------")
 
-    def log_event(self, descript, data):
-        """ Print connection accepted """
-        # TODO: Add timestamp
-        print(f"[ Server {descript} ]: {data.strip()}")
-
     def run(self):
         """ Start server """
         protocol: Protocol = self.protocol
@@ -51,12 +46,12 @@ class Server:
             while True:
                 self.c_socket, _ = self.s_socket.accept()
                 data = self.c_socket.recv(2048).decode('utf-8')
-                self.log_event("< Fifo", data)
+                protocol.log_event("< Fifo", data)
                 if protocol.parse_data(data):
                     if protocol.should_respond():
                         protocol.build_resp()
                         self.c_socket.send(protocol.send.encode())
-                        self.log_event("> Fifo", protocol.send)
+                        protocol.log_event("> Fifo", protocol.send)
                     protocol.forward_data()
                 self.c_socket.close()
         except KeyboardInterrupt:
@@ -69,7 +64,7 @@ def main(argv):
         "pending":  512,
         "buf_size": 2048,
         "reuse":    1,
-        "forward":  None
+        "forward":  ""
     }
     opts, _ = getopt.getopt(argv, "P:p:b:r:f:k:",
         ["port=", "pending=", "buf_size=", "reuse=", "forward=", "api_key="])

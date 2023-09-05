@@ -12,7 +12,7 @@ QUEUE = src/c/utils/queue.c
 LOGGER = src/c/utils/logger.c
 
 C_PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111 -k 1
-PY_PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111/{{test}}/{{example}}
+PY_PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f http://localhost:5111/{{id}}
 
 all: clients server debug_server debug_clients
 
