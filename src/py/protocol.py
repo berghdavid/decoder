@@ -66,6 +66,10 @@ class Protocol(ABC):
         except requests.exceptions.RequestException as err:
             eprint(err)
 
+    def print(self):
+        """ Print data """
+        print(self.params)
+
     @abstractmethod
     def parse_data(self, rec: str) -> bool:
         """
@@ -81,8 +85,3 @@ class Protocol(ABC):
     @abstractmethod
     def build_resp(self) -> bool:
         """ Build the response message """
-
-    @abstractmethod
-    def print(self):
-        """ Print data """
-        print(self.params)

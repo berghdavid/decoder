@@ -2,16 +2,19 @@
 Main program for backend
 """
 
+import threading
 import sys
 import getopt
 import socket
 from protocol import Protocol
 from fifo import Fifo
+from meitrack import Meitrack
 from utils import eprint
 
 class Server:
     """ Holds relevant server data """
     def __init__(self, protocols: [Protocol], params):
+        self.threads: [] = [None] * len(protocols)
         self.protocols: [Protocol] = []
         for protocol in protocols:
             self.protocols.append(protocol())
@@ -51,12 +54,12 @@ class Server:
             while True:
                 c_socket, _ = s_socket.accept()
                 data = c_socket.recv(2048).decode('utf-8')
-                protocol.log_event("< Fifo", data)
+                protocol.log_event(f"< {protocol.__class__.__name__}", data)
                 if protocol.parse_data(data):
                     if protocol.should_respond():
                         protocol.build_resp()
                         c_socket.send(protocol.send.encode())
-                        protocol.log_event("> Fifo", protocol.send)
+                        protocol.log_event(f"> {protocol.__class__.__name__}", protocol.send)
                     protocol.forward_data()
                 c_socket.close()
         except KeyboardInterrupt:
@@ -66,7 +69,8 @@ class Server:
         """ Start server """
         self.print_self()
         for i in range(len(self.protocols)):
-            self.run(i)
+            self.threads[i] = threading.Thread(target=self.run, args=(i,))
+            self.threads[i].start()
 
 def main(argv):
     """ Main function """
@@ -92,7 +96,7 @@ def main(argv):
         eprint(f"Could not parse arguments from '{argv}'")
         eprint("Pass arguments in format: P:p:b:r:f:k:")
         return
-    server = Server([Fifo], params)
+    server = Server([Fifo, Meitrack], params)
     server.run_all()
 
 if __name__ == "__main__":
