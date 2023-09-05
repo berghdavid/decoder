@@ -122,7 +122,3 @@ class Fifo(Protocol):
         xor_str = str(hex(xor))[2:].rjust(2, '0')
         self.send = f"##{pack_len}*{xor_str}\r\n"
         return True
-
-    def print(self):
-        print(self.recv)
-        print(self.params)

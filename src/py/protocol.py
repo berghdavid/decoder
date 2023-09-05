@@ -85,5 +85,4 @@ class Protocol(ABC):
     @abstractmethod
     def print(self):
         """ Print data """
-        print(self.recv)
         print(self.params)
