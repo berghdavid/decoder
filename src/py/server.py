@@ -11,52 +11,62 @@ from utils import eprint
 
 class Server:
     """ Holds relevant server data """
-    def __init__(self, prot: Protocol, params):
-        self.protocol: Protocol = prot()
+    def __init__(self, protocols: [Protocol], params):
+        self.protocols: [Protocol] = []
+        for protocol in protocols:
+            self.protocols.append(protocol())
         self.params = params
-        self.host = ""
-        self.s_socket = None
-        self.c_socket = None
-        self.protocol.setup_forwarding(self.params["forward"])
-        self.init_socket()
-
-    def init_socket(self):
-        """ Start up socket connection """
         self.host = socket.gethostbyname(socket.gethostname())
-        self.s_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.s_socket.bind((self.host, self.protocol.PORT))
-        self.s_socket.listen(self.params["pending"])
+        self.s_sockets: [socket] = []
+        for protocol in self.protocols:
+            self.init_socket(protocol)
+            protocol.setup_forwarding(params["forward"])
+
+    def init_socket(self, protocol: Protocol):
+        """ Start up socket connection """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((self.host, protocol.PORT))
+        sock.listen(self.params["pending"])
+        self.s_sockets.append(sock)
 
     def print_self(self):
         """ Print relevant information """
         print(" ------------- Starting server -------------")
         print(f"\thost:     {self.host}")
-        print(f"\tport:     {self.protocol.PORT}")
         print(f"\tpending:  {self.params['pending']}")
         print(f"\tbuf_size: {self.params['buf_size']}")
         print(f"\treuse:    {self.params['reuse']}")
-        print(f"\tforward:  {self.protocol.forw}")
+        print(f"\tforward:  {self.protocols[0].forw}")
         print(" -------------------------------------------")
 
-    def run(self):
-        """ Start server """
-        protocol: Protocol = self.protocol
-        self.print_self()
+    def run(self, worker: int):
+        """ Run a protocol parser given by index worker """
+        protocol: Protocol = self.protocols[worker]
+        s_socket = self.s_sockets[worker]
+        c_socket = None
+        print(f"Running {protocol.__class__.__name__} parser on port "
+              f"{protocol.PORT}")
         try:
             while True:
-                self.c_socket, _ = self.s_socket.accept()
-                data = self.c_socket.recv(2048).decode('utf-8')
+                c_socket, _ = s_socket.accept()
+                data = c_socket.recv(2048).decode('utf-8')
                 protocol.log_event("< Fifo", data)
                 if protocol.parse_data(data):
                     if protocol.should_respond():
                         protocol.build_resp()
-                        self.c_socket.send(protocol.send.encode())
+                        c_socket.send(protocol.send.encode())
                         protocol.log_event("> Fifo", protocol.send)
                     protocol.forward_data()
-                self.c_socket.close()
+                c_socket.close()
         except KeyboardInterrupt:
             print("Server terminated by user")
+
+    def run_all(self):
+        """ Start server """
+        self.print_self()
+        for i in range(len(self.protocols)):
+            self.run(i)
 
 def main(argv):
     """ Main function """
@@ -82,8 +92,8 @@ def main(argv):
         eprint(f"Could not parse arguments from '{argv}'")
         eprint("Pass arguments in format: P:p:b:r:f:k:")
         return
-    server = Server(Fifo, params)
-    server.run()
+    server = Server([Fifo], params)
+    server.run_all()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
