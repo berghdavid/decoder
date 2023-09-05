@@ -5,16 +5,15 @@ Main program for backend
 import sys
 import getopt
 import socket
+from protocol import Protocol
+from fifo import Fifo
+from utils import eprint
 
 class Server:
     """ Holds relevant server data """
-    def __init__(self, port, pending, buf_size, reuse, forward, api_key):
-        self.port = port
-        self.pending = pending
-        self.buf_size = buf_size
-        self.reuse = reuse
-        self.forward = forward
-        self.api_key = api_key
+    def __init__(self, prot: Protocol, params):
+        self.protocol: Protocol = prot()
+        self.params = params
         self.host = ""
         self.s_socket = None
         self.c_socket = None
@@ -23,68 +22,74 @@ class Server:
         """ Start up socket connection """
         self.host = socket.gethostbyname(socket.gethostname())
         self.s_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s_socket.bind((self.host, self.port))
-        self.s_socket.listen(self.pending)
+        self.s_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.s_socket.bind((self.host, self.params["port"]))
+        self.s_socket.listen(self.params["pending"])
 
     def print_self(self):
         """ Print relevant information """
         print(" ------------- Starting server -------------")
-        print(f"\tHOST:    {self.host}")
-        print(f"\tPORT:    {self.port}")
-        print(f"\tPENDING: {self.pending}")
-        print(f"\tMAX_BUF: {self.buf_size}")
-        print(f"\tREUSE:   {self.reuse}")
-        print(f"\tFORWARD: {self.forward}")
-        print(f"\tAPI_KEY: {self.api_key}")
+        print(f"\thost:     {self.host}")
+        print(f"\tport:     {self.params['port']}")
+        print(f"\tpending:  {self.params['pending']}")
+        print(f"\tbuf_size: {self.params['buf_size']}")
+        print(f"\treuse:    {self.params['reuse']}")
+        print(f"\tforward:  {self.protocol.forw}")
         print(" -------------------------------------------")
+
+    def log_event(self, descript, data):
+        """ Print connection accepted """
+        # TODO: Add timestamp
+        print(f"[ Server {descript} ]: {data.strip()}")
 
     def run(self):
         """ Start server """
-        print("Running fifo parser")
+        protocol: Protocol = self.protocol
+        protocol.setup_forwarding(self.params["forward"])
         self.print_self()
-
         try:
             while True:
                 self.c_socket, c_address = self.s_socket.accept()
-                print(f"Accepted connection from {c_address}")
                 data = self.c_socket.recv(2048).decode('utf-8')
-                if not data:
-                    break
-                print(f"Received data: {data}")
-                self.c_socket.send("Hello\n".encode())
+                self.log_event(f"< {c_address[0]}", data)
+                if protocol.parse_data(data):
+                    if protocol.should_respond():
+                        protocol.build_resp()
+                        self.c_socket.send(protocol.send.encode())
+                        self.log_event(f"> {c_address[0]}", protocol.send)
+                    protocol.forward_data()
                 self.c_socket.close()
         except KeyboardInterrupt:
             print("Server terminated by user")
 
 def main(argv):
     """ Main function """
-    port: int = 5124
-    pending: int = 512
-    buf_size: int = 2048
-    reuse: int = 1
-    forward: str = None
-    api_key: int = 0
+    params = {
+        "port":     5124,
+        "pending":  512,
+        "buf_size": 2048,
+        "reuse":    1,
+        "forward":  None
+    }
     opts, _ = getopt.getopt(argv, "P:p:b:r:f:k:",
         ["port=", "pending=", "buf_size=", "reuse=", "forward=", "api_key="])
     try:
         for opt, arg in opts:
             if opt in ("-P", "--port"):
-                port = int(arg)
+                params["port"] = int(arg)
             elif opt in ("-p", "--pending"):
-                port = int(arg)
+                params["pending"] = int(arg)
             elif opt in ("-b", "--buf_size"):
-                port = int(arg)
+                params["buf_size"] = int(arg)
             elif opt in ("-r", "--reuse"):
-                port = int(arg)
+                params["reuse"] = int(arg)
             elif opt in ("-f", "--forward"):
-                port = int(arg)
-            elif opt in ("-k", "--api_key"):
-                port = int(arg)
+                params["forward"] = arg
     except ValueError:
-        print(f"Could not parse arguments from '{argv}'")
-        print("Pass arguments in format: P:p:b:r:f:k:")
+        eprint(f"Could not parse arguments from '{argv}'")
+        eprint("Pass arguments in format: P:p:b:r:f:k:")
         return
-    server = Server(port, pending, buf_size, reuse, forward, api_key)
+    server = Server(Fifo, params)
     server.init_socket()
     server.run()
 

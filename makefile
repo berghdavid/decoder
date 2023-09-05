@@ -11,7 +11,8 @@ PARSER = src/c/utils/parser.c
 QUEUE = src/c/utils/queue.c
 LOGGER = src/c/utils/logger.c
 
-PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111 -k 1
+C_PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111 -k 1
+PY_PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111/{{test}}/{{example}}
 
 all: clients server debug_server debug_clients
 
@@ -37,21 +38,21 @@ debug_clients: $(CLIENTS) $(UTILS)
 # Server
 
 run_server: server
-	./server $(PARAMS)
+	./server $(C_PARAMS)
 
 server: $(SERVER) $(PARSER) $(LOGGER)
 	$(CC) -o server $(CFLAGS) $(OPT_FLAGS) $(SERVER) $(PARSER) $(LOGGER) $(LDFLAGS)
 
 valgrind_server: debug_server
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server $(PARAMS)
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./d_server $(C_PARAMS)
 
 debug_server: $(SERVER) $(PARSER) $(LOGGER)
 	$(CC) -o d_server $(DEBUG_FLAGS) $(CFLAGS) $(SERVER) $(PARSER) $(LOGGER) $(LDFLAGS)
 
 # Python server
 
-py_server:
-	python3 src/py/server.py
+py:
+	python3 src/py/server.py $(PY_PARAMS)
 
 # Cleanup
 
