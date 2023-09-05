@@ -49,14 +49,14 @@ class Server:
         self.print_self()
         try:
             while True:
-                self.c_socket, c_address = self.s_socket.accept()
+                self.c_socket, _ = self.s_socket.accept()
                 data = self.c_socket.recv(2048).decode('utf-8')
-                self.log_event(f"< {c_address[0]}", data)
+                self.log_event("< Fifo", data)
                 if protocol.parse_data(data):
                     if protocol.should_respond():
                         protocol.build_resp()
                         self.c_socket.send(protocol.send.encode())
-                        self.log_event(f"> {c_address[0]}", protocol.send)
+                        self.log_event("> Fifo", protocol.send)
                     protocol.forward_data()
                 self.c_socket.close()
         except KeyboardInterrupt:

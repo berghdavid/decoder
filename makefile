@@ -16,10 +16,21 @@ PY_PARAMS = -P 5124 -p 100 -b 2048 -r 1 -f localhost:5111/{{test}}/{{example}}
 
 all: clients server debug_server debug_clients
 
-# Docker
+# Docker C server
 
-image:
-	docker build -t fifo .
+image_c:
+	docker build -t fifo-c -f Dockerfile-c
+
+compose_c:
+	docker compose -f docker-compose-c.yml up -d --build
+
+# Docker Py server
+
+image_py:
+	docker build -t fifo-py -f docker/Dockerfile-py
+
+compose_py:
+	docker compose -f docker-compose-py.yml up -d --build
 
 # Clients
 

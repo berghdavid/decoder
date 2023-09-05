@@ -1,0 +1,19 @@
+version: "3.7"
+name: "fifo"
+services:
+  fifo:
+    build:
+      context: .
+      dockerfile: Dockerfile-py
+    restart: unless-stopped
+    container_name: fifo-py
+    ports:
+      - "5124:5124"
+    environment:
+      - PORT=5124
+      - PENDING=512
+      - MAX_BUF=2048
+      - REUSE=0
+      - FORWARD=localhost:5111
+    extra_hosts:
+    - "host.docker.internal:host-gateway"

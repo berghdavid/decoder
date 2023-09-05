@@ -2,10 +2,11 @@ version: "3.7"
 name: "fifo"
 services:
   fifo:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile-c
     restart: unless-stopped
     container_name: fifo-c
-    image: fifo-i
     ports:
       - "5124:5124"
     environment:
