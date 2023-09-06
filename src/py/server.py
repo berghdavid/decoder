@@ -50,6 +50,8 @@ class Server:
         c_socket = None
         print(f"Running {protocol.__class__.__name__} parser on port "
               f"{protocol.PORT}")
+        if protocol.forw != "":
+            print("{protocol.__class__.__name__} forwarding to {protocol.forw}")
         try:
             while True:
                 c_socket, _ = s_socket.accept()

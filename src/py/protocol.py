@@ -62,7 +62,7 @@ class Protocol(ABC):
         json = {"data": {"signals": self.params}}
         try:
             requests.post(new_url, json=json, timeout=1)
-            self.log_event(f"> {new_url}", self.params)
+            self.log_event(f"> {new_url}", json)
         except requests.exceptions.RequestException as err:
             eprint(err)
 
