@@ -38,7 +38,7 @@ class Protocol(ABC):
         if not forw:
             self.forw = ""
             return True
-        reg = re.compile(r'\{\{([^}]+)\}\}')
+        reg = re.compile(r'\{([^}]+)\}')
         hits = reg.findall(forw)
         for hit in hits:
             if hit not in self.ALL_PARAMS:
@@ -58,7 +58,7 @@ class Protocol(ABC):
         for key in self.keys:
             if key in self.params:
                 # Double brackets in fstring => single bracket
-                new_url = new_url.replace(f"{{{{{key}}}}}", self.params[key])
+                new_url = new_url.replace(f"{{{key}}}", self.params[key])
         json = {"data": {"signals": self.params}}
         try:
             requests.post(new_url, json=json, timeout=1)
