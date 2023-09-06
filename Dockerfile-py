@@ -1,4 +1,5 @@
 FROM python:slim-bullseye
+RUN pip install requests
 WORKDIR /app
 COPY ./src/py .
 EXPOSE 5020 5124
