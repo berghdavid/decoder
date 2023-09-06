@@ -19,7 +19,7 @@ all: clients server debug_server debug_clients
 # Docker C server
 
 image_c:
-	docker build -t fifo-c -f Dockerfile-c
+	docker build -t fifo-c -f Dockerfile-c .
 
 compose_c:
 	docker compose -f docker-compose-c.yml up -d --build
@@ -27,7 +27,7 @@ compose_c:
 # Docker Py server
 
 image_py:
-	docker build -t fifo-py -f Dockerfile-py
+	docker build -t fifo-py -f Dockerfile-py .
 
 compose_py:
 	docker compose -f docker-compose-py.yml up -d --build
