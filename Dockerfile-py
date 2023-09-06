@@ -1,5 +1,5 @@
 FROM python:slim-bullseye
 WORKDIR /app
 COPY ./src/py .
-EXPOSE 5124
+EXPOSE 5020 5124
 CMD python3 -u /app/server.py -P $PORT -p $PENDING -b $MAX_BUF -r $REUSE -f $FORWARD
