@@ -27,7 +27,7 @@ compose_c:
 # Docker Py server
 
 image_py:
-	docker build -t fifo-py -f docker/Dockerfile-py
+	docker build -t fifo-py -f Dockerfile-py
 
 compose_py:
 	docker compose -f docker-compose-py.yml up -d --build
