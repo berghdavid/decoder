@@ -19,7 +19,7 @@ class Server:
         for protocol in protocols:
             self.protocols.append(protocol())
         self.params = params
-        self.host = socket.gethostbyname(socket.gethostname())
+        self.host = '0.0.0.0'
         self.s_sockets: [socket] = []
         for protocol in self.protocols:
             self.init_socket(protocol)
